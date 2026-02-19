@@ -1,166 +1,52 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, lazy, Suspense } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
 import { useToast } from "@/hooks/use-toast";
-import { MapPin, Phone, Calendar, RotateCcw, CheckCircle2, Clock, Trash2 } from "lucide-react";
+import { MapPin, Phone, CheckCircle2, Clock, Trash2, LayoutGrid, Map, TableProperties, Filter, CalendarDays } from "lucide-react";
 import { Link } from "react-router-dom";
+import CommitModal from "./CommitModal";
+import StoreTableView from "./StoreTableView";
 
-interface Store {
+const StoreMapView = lazy(() => import("./StoreMapView"));
+
+export interface Store {
   id: string;
   nev: string;
   cim: string;
   kerület: string | null;
+  lat: number | null;
+  lng: number | null;
+  telefon: string | null;
+  email: string | null;
+  tipus: string;
 }
 
-interface Commitment {
+export interface Commitment {
   id: string;
   user_id: string;
   store_id: string;
   tipus: string;
   datum: string | null;
   aktiv: boolean;
-  profiles: {
-    keresztnev: string;
-    telefonszam: string;
-  } | null;
+  profiles: { keresztnev: string; telefonszam: string } | null;
 }
 
-interface CommitModalProps {
-  store: Store;
-  onClose: () => void;
-  onSuccess: () => void;
-  existingCommitment?: Commitment | null;
-}
-
-function CommitModal({ store, onClose, onSuccess, existingCommitment }: CommitModalProps) {
-  const { user } = useAuth();
-  const { toast } = useToast();
-  const [tipus, setTipus] = useState<"állandó" | "egyszeri">("állandó");
-  const [datum, setDatum] = useState("");
-  const [loading, setLoading] = useState(false);
-
-  // Next Friday
-  const nextFriday = (() => {
-    const d = new Date();
-    const day = d.getDay();
-    const diff = (5 - day + 7) % 7 || 7;
-    d.setDate(d.getDate() + diff);
-    return d.toISOString().split("T")[0];
-  })();
-
-  useEffect(() => {
-    setDatum(nextFriday);
-  }, [nextFriday]);
-
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!user) return;
-    setLoading(true);
-
-    const payload = {
-      user_id: user.id,
-      store_id: store.id,
-      tipus: tipus === "állandó" ? "allandó" : "egyszeri",
-      datum: tipus === "egyszeri" ? datum : null,
-      aktiv: true,
-    };
-
-    const { error } = await supabase.from("rescue_commitments").insert(payload);
-    if (error) {
-      toast({ title: "Hiba", description: error.message, variant: "destructive" });
-    } else {
-      toast({ title: "Sikeresen bevállaltad! 🍞", description: `${store.nev} – ${tipus === "állandó" ? "Állandó mentés" : datum}` });
-      onSuccess();
-      onClose();
-    }
-    setLoading(false);
-  };
-
-  return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center px-4" style={{ background: "rgba(0,0,0,0.45)" }} onClick={onClose}>
-      <div className="bg-card rounded-3xl border border-border p-6 w-full max-w-md" style={{ boxShadow: "var(--shadow-card)" }} onClick={e => e.stopPropagation()}>
-        <h3 className="text-xl font-bold text-foreground mb-1">{store.nev}</h3>
-        <p className="text-sm text-muted-foreground mb-5 flex items-center gap-1">
-          <MapPin size={13} /> {store.cim}
-        </p>
-
-        <form onSubmit={handleSubmit} className="space-y-4">
-          <div>
-            <label className="block text-sm font-medium text-foreground mb-2">Mentés típusa</label>
-            <div className="grid grid-cols-2 gap-3">
-              {(["állandó", "egyszeri"] as const).map(t => (
-                <button
-                  key={t}
-                  type="button"
-                  onClick={() => setTipus(t)}
-                  className={`p-3 rounded-xl border-2 text-sm font-medium flex flex-col items-center gap-1.5 transition-all ${
-                    tipus === t
-                      ? "border-primary bg-primary/10 text-primary"
-                      : "border-border text-muted-foreground hover:border-primary/50"
-                  }`}
-                >
-                  {t === "állandó" ? <RotateCcw size={18} /> : <Calendar size={18} />}
-                  {t === "állandó" ? "Állandó" : "Egyszeri"}
-                  <span className="text-xs font-normal opacity-70">
-                    {t === "állandó" ? "Minden pénteken" : "Csak egyszer"}
-                  </span>
-                </button>
-              ))}
-            </div>
-          </div>
-
-          {tipus === "egyszeri" && (
-            <div>
-              <label className="block text-sm font-medium text-foreground mb-1.5">Dátum (péntek)</label>
-              <input
-                type="date"
-                value={datum}
-                onChange={e => setDatum(e.target.value)}
-                required
-                className="w-full px-4 py-2.5 rounded-xl border border-border bg-background text-foreground focus:outline-none focus:ring-2 focus:ring-primary focus:border-transparent transition-all"
-              />
-            </div>
-          )}
-
-          <div className="rounded-xl p-3 text-sm" style={{ background: "hsl(var(--teal-light))", color: "hsl(var(--teal-dark))" }}>
-            🕡 Minden péntek 18:30-kor – az üzlet bezárása után
-          </div>
-
-          <div className="flex gap-3 pt-2">
-            <button type="button" onClick={onClose} className="btn-outline-teal flex-1 text-sm py-2.5">
-              Mégse
-            </button>
-            <button type="submit" disabled={loading} className="btn-teal flex-1 text-sm py-2.5 disabled:opacity-60">
-              {loading ? "Bevállalás..." : "Bevállalom! 🍞"}
-            </button>
-          </div>
-        </form>
-      </div>
-    </div>
-  );
-}
-
-interface StoreCardProps {
+// ---- StoreCard ----
+function StoreCard({ store, commitments, myCommitment, onRefresh }: {
   store: Store;
   commitments: Commitment[];
   myCommitment?: Commitment | null;
   onRefresh: () => void;
-}
-
-function StoreCard({ store, commitments, myCommitment, onRefresh }: StoreCardProps) {
+}) {
   const { user } = useAuth();
   const { toast } = useToast();
   const [showModal, setShowModal] = useState(false);
 
-  const activeCommitments = commitments.filter(c => c.aktiv);
-  const permanentVolunteer = activeCommitments.find(c => c.tipus === "allandó");
-  const isCovered = !!permanentVolunteer;
+  const activeCommitments = commitments.filter((c) => c.aktiv);
+  const hasPermanent = activeCommitments.some((c) => c.tipus === "allandó");
 
   const handleCancel = async (commitmentId: string) => {
-    const { error } = await supabase
-      .from("rescue_commitments")
-      .delete()
-      .eq("id", commitmentId);
+    const { error } = await supabase.from("rescue_commitments").delete().eq("id", commitmentId);
     if (error) {
       toast({ title: "Hiba", description: error.message, variant: "destructive" });
     } else {
@@ -181,9 +67,14 @@ function StoreCard({ store, commitments, myCommitment, onRefresh }: StoreCardPro
               {store.kerület && " – "}
               {store.cim}
             </p>
+            {store.telefon && (
+              <a href={`tel:${store.telefon}`} className="text-xs text-muted-foreground flex items-center gap-1 mt-0.5 hover:text-primary transition-colors">
+                <Phone size={10} /> {store.telefon}
+              </a>
+            )}
           </div>
           <div className="ml-3">
-            {isCovered ? (
+            {hasPermanent ? (
               <span className="badge-taken">Foglalt</span>
             ) : (
               <span className="badge-free">Szabad</span>
@@ -195,8 +86,12 @@ function StoreCard({ store, commitments, myCommitment, onRefresh }: StoreCardPro
           {activeCommitments.length === 0 ? (
             <p className="text-xs text-muted-foreground italic">Még senki sem vállalta be.</p>
           ) : (
-            activeCommitments.map(c => (
-              <div key={c.id} className="flex items-center justify-between rounded-lg px-3 py-2" style={{ background: "hsl(var(--muted))" }}>
+            activeCommitments.map((c) => (
+              <div
+                key={c.id}
+                className="flex items-center justify-between rounded-lg px-3 py-2"
+                style={{ background: "hsl(var(--muted))" }}
+              >
                 <div className="flex items-center gap-2 text-sm">
                   {c.tipus === "allandó" ? (
                     <CheckCircle2 size={14} className="text-primary flex-shrink-0" />
@@ -204,11 +99,9 @@ function StoreCard({ store, commitments, myCommitment, onRefresh }: StoreCardPro
                     <Clock size={14} style={{ color: "hsl(35 80% 50%)" }} className="flex-shrink-0" />
                   )}
                   <div>
-                    <span className="font-medium text-foreground">
-                      {c.profiles?.keresztnev ?? "Ismeretlen"}
-                    </span>
+                    <span className="font-medium text-foreground">{c.profiles?.keresztnev ?? "Ismeretlen"}</span>
                     {c.profiles?.telefonszam && (
-                      <span className="text-muted-foreground ml-2 flex items-center gap-1 text-xs">
+                      <span className="text-muted-foreground ml-2 text-xs flex items-center gap-1">
                         <Phone size={10} /> {c.profiles.telefonszam}
                       </span>
                     )}
@@ -237,14 +130,14 @@ function StoreCard({ store, commitments, myCommitment, onRefresh }: StoreCardPro
 
         {user ? (
           myCommitment ? (
-            <div className="rounded-xl p-3 text-sm text-center" style={{ background: "hsl(var(--teal-light))", color: "hsl(var(--teal-dark))" }}>
+            <div
+              className="rounded-xl p-3 text-sm text-center"
+              style={{ background: "hsl(var(--teal-light))", color: "hsl(var(--teal-dark))" }}
+            >
               ✅ Bevállaltad ({myCommitment.tipus === "allandó" ? "állandó" : myCommitment.datum})
             </div>
           ) : (
-            <button
-              onClick={() => setShowModal(true)}
-              className="btn-teal w-full text-sm py-2.5"
-            >
+            <button onClick={() => setShowModal(true)} className="btn-teal w-full text-sm py-2.5">
               Bevállalom! 🍞
             </button>
           )
@@ -260,35 +153,37 @@ function StoreCard({ store, commitments, myCommitment, onRefresh }: StoreCardPro
           store={store}
           onClose={() => setShowModal(false)}
           onSuccess={onRefresh}
-          existingCommitment={myCommitment}
         />
       )}
     </>
   );
 }
 
+// ---- Main StoreGrid ----
+type ViewMode = "grid" | "map" | "table";
+
 export default function StoreGrid() {
   const { user } = useAuth();
   const [stores, setStores] = useState<Store[]>([]);
   const [commitments, setCommitments] = useState<Commitment[]>([]);
   const [loading, setLoading] = useState(true);
+  const [view, setView] = useState<ViewMode>("grid");
+  const [filterAvailable, setFilterAvailable] = useState(false);
+  const [filterDate, setFilterDate] = useState("");
 
   const fetchData = async () => {
     const [storesRes, commitmentsRes, profilesRes] = await Promise.all([
-      supabase.from("stores").select("*").order("nev"),
-      supabase.from("rescue_commitments")
-        .select("*")
-        .eq("aktiv", true)
-        .order("created_at"),
+      supabase.from("stores").select("*").order("tipus").order("nev"),
+      supabase.from("rescue_commitments").select("*").eq("aktiv", true).order("created_at"),
       supabase.from("profiles").select("user_id, keresztnev, telefonszam"),
     ]);
 
     const profileMap: Record<string, { keresztnev: string; telefonszam: string }> = {};
-    (profilesRes.data ?? []).forEach(p => { profileMap[p.user_id] = p; });
+    (profilesRes.data ?? []).forEach((p) => { profileMap[p.user_id] = p; });
 
-    if (storesRes.data) setStores(storesRes.data);
+    if (storesRes.data) setStores(storesRes.data as Store[]);
     if (commitmentsRes.data) {
-      const enriched: Commitment[] = commitmentsRes.data.map(c => ({
+      const enriched: Commitment[] = commitmentsRes.data.map((c) => ({
         ...c,
         profiles: profileMap[c.user_id] ?? null,
       }));
@@ -299,12 +194,10 @@ export default function StoreGrid() {
 
   useEffect(() => {
     fetchData();
-
     const channel = supabase
       .channel("rescue-changes")
       .on("postgres_changes", { event: "*", schema: "public", table: "rescue_commitments" }, fetchData)
       .subscribe();
-
     return () => { supabase.removeChannel(channel); };
   }, []);
 
@@ -322,16 +215,38 @@ export default function StoreGrid() {
     );
   }
 
-  const coveredCount = stores.filter(s =>
-    commitments.some(c => c.store_id === s.id && c.aktiv && c.tipus === "allandó")
+  const bakeries = stores.filter((s) => s.tipus === "pekseg");
+  const coveredCount = bakeries.filter((s) =>
+    commitments.some((c) => c.store_id === s.id && c.aktiv && c.tipus === "allandó")
   ).length;
+
+  const nextFriday = (() => {
+    const d = new Date();
+    const day = d.getDay();
+    const diff = (5 - day + 7) % 7 || 7;
+    d.setDate(d.getDate() + diff);
+    return d.toISOString().split("T")[0];
+  })();
+
+  const filteredBakeries = bakeries.filter((store) => {
+    const sc = commitments.filter((c) => c.store_id === store.id && c.aktiv);
+    const hasPermanent = sc.some((c) => c.tipus === "allandó");
+    if (filterAvailable && hasPermanent) return false;
+    if (filterDate) {
+      const covered = sc.some((c) => c.tipus === "allandó" || c.datum === filterDate);
+      if (covered) return false;
+    }
+    return true;
+  });
+
+  const displayBakeries = filterAvailable || filterDate ? filteredBakeries : bakeries;
 
   return (
     <div>
       {/* Stats */}
-      <div className="grid grid-cols-3 gap-3 mb-8">
+      <div className="grid grid-cols-3 gap-3 mb-6">
         <div className="rounded-2xl p-4 text-center border border-border bg-card" style={{ boxShadow: "var(--shadow-card)" }}>
-          <div className="text-2xl font-bold" style={{ color: "hsl(var(--teal))" }}>{stores.length}</div>
+          <div className="text-2xl font-bold" style={{ color: "hsl(var(--teal))" }}>{bakeries.length}</div>
           <div className="text-xs text-muted-foreground mt-0.5">üzlet</div>
         </div>
         <div className="rounded-2xl p-4 text-center border border-border bg-card" style={{ boxShadow: "var(--shadow-card)" }}>
@@ -339,27 +254,146 @@ export default function StoreGrid() {
           <div className="text-xs text-muted-foreground mt-0.5">lefedett</div>
         </div>
         <div className="rounded-2xl p-4 text-center border border-border bg-card" style={{ boxShadow: "var(--shadow-card)" }}>
-          <div className="text-2xl font-bold" style={{ color: "hsl(35 80% 50%)" }}>{stores.length - coveredCount}</div>
+          <div className="text-2xl font-bold" style={{ color: "hsl(35 80% 50%)" }}>{bakeries.length - coveredCount}</div>
           <div className="text-xs text-muted-foreground mt-0.5">szabad</div>
         </div>
       </div>
 
-      <div className="grid sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
-        {stores.map(store => {
-          const storeCommitments = commitments.filter(c => c.store_id === store.id);
-          const myCommitment = user
-            ? storeCommitments.find(c => c.user_id === user.id) ?? null
-            : null;
-          return (
-            <StoreCard
-              key={store.id}
-              store={store}
-              commitments={storeCommitments}
-              myCommitment={myCommitment}
-              onRefresh={fetchData}
+      {/* Toolbar: view toggle + filters */}
+      <div className="flex flex-wrap items-center gap-3 mb-5">
+        {/* View Toggle */}
+        <div className="flex rounded-xl border border-border overflow-hidden bg-card" style={{ boxShadow: "var(--shadow-card)" }}>
+          {([
+            { key: "grid", label: "Kártyák", icon: <LayoutGrid size={15} /> },
+            { key: "table", label: "Táblázat", icon: <TableProperties size={15} /> },
+            { key: "map", label: "Térkép", icon: <Map size={15} /> },
+          ] as const).map((v) => (
+            <button
+              key={v.key}
+              onClick={() => setView(v.key)}
+              className={`flex items-center gap-1.5 px-3 py-2 text-sm font-medium transition-colors ${
+                view === v.key
+                  ? "text-primary-foreground"
+                  : "text-muted-foreground hover:text-foreground"
+              }`}
+              style={view === v.key ? { background: "hsl(var(--teal))" } : {}}
+            >
+              {v.icon}
+              <span className="hidden sm:inline">{v.label}</span>
+            </button>
+          ))}
+        </div>
+
+        {/* Filters */}
+        <div className="flex items-center gap-2 flex-wrap">
+          <button
+            onClick={() => { setFilterAvailable(!filterAvailable); setFilterDate(""); }}
+            className={`flex items-center gap-1.5 px-3 py-2 rounded-xl text-sm font-medium border transition-all ${
+              filterAvailable
+                ? "border-primary text-primary bg-primary/10"
+                : "border-border text-muted-foreground hover:border-primary/50 bg-card"
+            }`}
+          >
+            <Filter size={13} />
+            Csak szabad
+          </button>
+
+          <div className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl border border-border bg-card text-sm text-muted-foreground">
+            <CalendarDays size={13} />
+            <input
+              type="date"
+              value={filterDate}
+              onChange={(e) => { setFilterDate(e.target.value); setFilterAvailable(false); }}
+              className="bg-transparent outline-none text-foreground text-sm"
+              placeholder={nextFriday}
+              title="Szűrés dátumra"
             />
-          );
-        })}
+            {filterDate && (
+              <button onClick={() => setFilterDate("")} className="text-destructive ml-1 hover:opacity-70">✕</button>
+            )}
+          </div>
+        </div>
+
+        {(filterAvailable || filterDate) && (
+          <span className="text-xs text-muted-foreground">
+            {displayBakeries.length} szabad üzlet
+          </span>
+        )}
+      </div>
+
+      {/* Views */}
+      {view === "grid" && (
+        <div className="grid sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
+          {displayBakeries.map((store) => {
+            const sc = commitments.filter((c) => c.store_id === store.id);
+            const myCommitment = user ? sc.find((c) => c.user_id === user.id) ?? null : null;
+            return (
+              <StoreCard
+                key={store.id}
+                store={store}
+                commitments={sc}
+                myCommitment={myCommitment}
+                onRefresh={fetchData}
+              />
+            );
+          })}
+          {displayBakeries.length === 0 && (
+            <div className="col-span-full text-center py-16 text-muted-foreground">
+              Minden szűrt üzlethez van önkéntes! 🎉
+            </div>
+          )}
+        </div>
+      )}
+
+      {view === "table" && (
+        <StoreTableView
+          stores={stores}
+          commitments={commitments}
+          onRefresh={fetchData}
+          filterAvailable={filterAvailable}
+          filterDate={filterDate}
+        />
+      )}
+
+      {view === "map" && (
+        <Suspense fallback={
+          <div className="rounded-2xl border border-border flex items-center justify-center text-muted-foreground" style={{ height: "520px" }}>
+            Térkép betöltése...
+          </div>
+        }>
+          <StoreMapView
+            stores={stores}
+            commitments={commitments}
+            onRefresh={fetchData}
+            filterAvailable={filterAvailable}
+            filterDate={filterDate}
+          />
+        </Suspense>
+      )}
+
+      {/* Drop-off info box */}
+      <div className="mt-8 rounded-2xl border border-border bg-card p-5" style={{ boxShadow: "var(--shadow-card)" }}>
+        <h3 className="font-bold text-foreground mb-2 text-base">📦 Elosztási útmutató</h3>
+        <p className="text-sm text-muted-foreground mb-3">
+          <strong>18:00–18:30 között</strong> kell odaérni az üzlethez. Fontos, hogy a pékáru minél szélesebb körben jusson el – <strong>elsősorban rászorulókhoz</strong>.
+        </p>
+        <div className="grid sm:grid-cols-2 gap-3 text-sm">
+          <div className="rounded-xl p-3 flex gap-3" style={{ background: "hsl(var(--teal-light))" }}>
+            <span className="text-lg">❄️</span>
+            <div>
+              <p className="font-semibold" style={{ color: "hsl(var(--teal-dark))" }}>Átér – Közösségi Hűtő</p>
+              <p className="text-xs text-muted-foreground">Népszínház utca 26., VIII. kerület</p>
+              <p className="text-xs text-muted-foreground">Ha marad, ide leadhatod</p>
+            </div>
+          </div>
+          <div className="rounded-xl p-3 flex gap-3" style={{ background: "hsl(var(--secondary))" }}>
+            <span className="text-lg">🏠</span>
+            <div>
+              <p className="font-semibold text-foreground">Hajléktalan szállók</p>
+              <p className="text-xs text-muted-foreground">Lásd a térképen – elfogadják a pékárut</p>
+            </div>
+          </div>
+        </div>
       </div>
     </div>
   );
