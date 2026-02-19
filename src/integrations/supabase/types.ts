@@ -89,23 +89,38 @@ export type Database = {
         Row: {
           cim: string
           created_at: string
+          email: string | null
           id: string
           kerület: string | null
+          lat: number | null
+          lng: number | null
           nev: string
+          telefon: string | null
+          tipus: string
         }
         Insert: {
           cim: string
           created_at?: string
+          email?: string | null
           id?: string
           kerület?: string | null
+          lat?: number | null
+          lng?: number | null
           nev: string
+          telefon?: string | null
+          tipus?: string
         }
         Update: {
           cim?: string
           created_at?: string
+          email?: string | null
           id?: string
           kerület?: string | null
+          lat?: number | null
+          lng?: number | null
           nev?: string
+          telefon?: string | null
+          tipus?: string
         }
         Relationships: []
       }
