@@ -2,87 +2,92 @@
 @tailwind components;
 @tailwind utilities;
 
-/* Definition of the design system. All colors, gradients, fonts, etc should be defined here. 
-All colors MUST be HSL.
-*/
+@import url('https://fonts.googleapis.com/css2?family=Playfair+Display:ital,wght@0,400;0,600;0,700;1,400&family=Lato:wght@300;400;500;700&display=swap');
+
+/* Búzakovász Design System */
 
 @layer base {
   :root {
-    --background: 0 0% 100%;
-    --foreground: 222.2 84% 4.9%;
+    /* Búzakovász brand colors (teal + warm wheat tones) */
+    --background: 40 30% 97%;
+    --foreground: 30 25% 15%;
 
     --card: 0 0% 100%;
-    --card-foreground: 222.2 84% 4.9%;
+    --card-foreground: 30 25% 15%;
 
     --popover: 0 0% 100%;
-    --popover-foreground: 222.2 84% 4.9%;
+    --popover-foreground: 30 25% 15%;
 
-    --primary: 222.2 47.4% 11.2%;
-    --primary-foreground: 210 40% 98%;
+    /* Teal brand color - matches buzakovász.hu */
+    --primary: 177 47% 52%;
+    --primary-foreground: 0 0% 100%;
 
-    --secondary: 210 40% 96.1%;
-    --secondary-foreground: 222.2 47.4% 11.2%;
+    --secondary: 40 35% 92%;
+    --secondary-foreground: 30 25% 25%;
 
-    --muted: 210 40% 96.1%;
-    --muted-foreground: 215.4 16.3% 46.9%;
+    --muted: 40 20% 93%;
+    --muted-foreground: 30 15% 50%;
 
-    --accent: 210 40% 96.1%;
-    --accent-foreground: 222.2 47.4% 11.2%;
+    --accent: 35 60% 55%;
+    --accent-foreground: 0 0% 100%;
 
-    --destructive: 0 84.2% 60.2%;
-    --destructive-foreground: 210 40% 98%;
+    --destructive: 0 72% 51%;
+    --destructive-foreground: 0 0% 100%;
 
-    --border: 214.3 31.8% 91.4%;
-    --input: 214.3 31.8% 91.4%;
-    --ring: 222.2 84% 4.9%;
+    --border: 40 20% 85%;
+    --input: 40 20% 85%;
+    --ring: 177 47% 52%;
 
-    --radius: 0.5rem;
+    --radius: 0.75rem;
+
+    /* Custom tokens */
+    --wheat: 40 60% 72%;
+    --wheat-dark: 35 55% 45%;
+    --teal: 177 47% 52%;
+    --teal-dark: 177 47% 38%;
+    --teal-light: 177 47% 92%;
+    --cream: 40 30% 97%;
+    --brown: 30 40% 25%;
+
+    /* Gradients */
+    --gradient-hero: linear-gradient(180deg, rgba(0,0,0,0.35) 0%, rgba(0,0,0,0.15) 60%, rgba(0,0,0,0.4) 100%);
+    --gradient-teal: linear-gradient(135deg, hsl(177 47% 52%), hsl(177 47% 42%));
+    --gradient-warm: linear-gradient(135deg, hsl(40 60% 92%), hsl(35 50% 88%));
+
+    /* Shadows */
+    --shadow-card: 0 2px 20px -4px hsl(30 25% 15% / 0.12);
+    --shadow-teal: 0 4px 20px -4px hsl(177 47% 52% / 0.35);
 
     --sidebar-background: 0 0% 98%;
-
     --sidebar-foreground: 240 5.3% 26.1%;
-
     --sidebar-primary: 240 5.9% 10%;
-
     --sidebar-primary-foreground: 0 0% 98%;
-
     --sidebar-accent: 240 4.8% 95.9%;
-
     --sidebar-accent-foreground: 240 5.9% 10%;
-
     --sidebar-border: 220 13% 91%;
-
     --sidebar-ring: 217.2 91.2% 59.8%;
   }
 
   .dark {
-    --background: 222.2 84% 4.9%;
-    --foreground: 210 40% 98%;
-
-    --card: 222.2 84% 4.9%;
-    --card-foreground: 210 40% 98%;
-
-    --popover: 222.2 84% 4.9%;
-    --popover-foreground: 210 40% 98%;
-
-    --primary: 210 40% 98%;
-    --primary-foreground: 222.2 47.4% 11.2%;
-
-    --secondary: 217.2 32.6% 17.5%;
-    --secondary-foreground: 210 40% 98%;
-
-    --muted: 217.2 32.6% 17.5%;
-    --muted-foreground: 215 20.2% 65.1%;
-
-    --accent: 217.2 32.6% 17.5%;
-    --accent-foreground: 210 40% 98%;
-
+    --background: 30 25% 8%;
+    --foreground: 40 20% 90%;
+    --card: 30 25% 12%;
+    --card-foreground: 40 20% 90%;
+    --popover: 30 25% 12%;
+    --popover-foreground: 40 20% 90%;
+    --primary: 177 47% 52%;
+    --primary-foreground: 0 0% 100%;
+    --secondary: 30 20% 18%;
+    --secondary-foreground: 40 20% 85%;
+    --muted: 30 20% 18%;
+    --muted-foreground: 40 10% 55%;
+    --accent: 35 60% 55%;
+    --accent-foreground: 0 0% 100%;
     --destructive: 0 62.8% 30.6%;
-    --destructive-foreground: 210 40% 98%;
-
-    --border: 217.2 32.6% 17.5%;
-    --input: 217.2 32.6% 17.5%;
-    --ring: 212.7 26.8% 83.9%;
+    --destructive-foreground: 0 0% 100%;
+    --border: 30 20% 22%;
+    --input: 30 20% 22%;
+    --ring: 177 47% 52%;
     --sidebar-background: 240 5.9% 10%;
     --sidebar-foreground: 240 4.8% 95.9%;
     --sidebar-primary: 224.3 76.3% 48%;
@@ -101,5 +106,52 @@ All colors MUST be HSL.
 
   body {
     @apply bg-background text-foreground;
+    font-family: 'Lato', sans-serif;
+  }
+
+  h1, h2, h3, h4, h5 {
+    font-family: 'Playfair Display', serif;
+  }
+}
+
+@layer components {
+  .btn-teal {
+    @apply bg-primary text-primary-foreground rounded-full px-6 py-2.5 font-medium transition-all duration-200;
+    box-shadow: var(--shadow-teal);
+  }
+  .btn-teal:hover {
+    background: hsl(var(--teal-dark));
+    transform: translateY(-1px);
+    box-shadow: 0 6px 24px -4px hsl(177 47% 52% / 0.45);
+  }
+
+  .btn-outline-teal {
+    @apply border-2 border-primary text-primary rounded-full px-6 py-2.5 font-medium transition-all duration-200 bg-transparent;
+  }
+  .btn-outline-teal:hover {
+    @apply bg-primary text-primary-foreground;
+  }
+
+  .store-card {
+    @apply bg-card rounded-2xl border border-border transition-all duration-200;
+    box-shadow: var(--shadow-card);
+  }
+  .store-card:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 8px 30px -6px hsl(30 25% 15% / 0.18);
+  }
+
+  .badge-free {
+    @apply bg-green-100 text-green-700 rounded-full px-3 py-1 text-xs font-semibold;
+  }
+
+  .badge-taken {
+    @apply bg-amber-100 text-amber-700 rounded-full px-3 py-1 text-xs font-semibold;
+  }
+
+  .badge-permanent {
+    @apply text-xs font-medium rounded-full px-2.5 py-0.5;
+    background: hsl(var(--teal-light));
+    color: hsl(var(--teal-dark));
   }
 }
