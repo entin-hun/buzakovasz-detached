@@ -2,6 +2,19 @@
 @tailwind components;
 @tailwind utilities;
 
+/* Leaflet map popup fix */
+.leaflet-popup-content-wrapper {
+  border-radius: 12px !important;
+  padding: 4px !important;
+  font-family: 'Lato', sans-serif;
+}
+.leaflet-popup-content {
+  margin: 8px 12px !important;
+}
+.leaflet-popup-tip-container {
+  margin-top: -1px;
+}
+
 @import url('https://fonts.googleapis.com/css2?family=Playfair+Display:ital,wght@0,400;0,600;0,700;1,400&family=Lato:wght@300;400;500;700&display=swap');
 
 /* Búzakovász Design System */

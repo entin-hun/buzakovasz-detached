@@ -59,7 +59,7 @@ const Index = () => {
         <div className="mb-4">
           <h2 className="text-2xl font-bold text-foreground mb-1">Üzletek &amp; Önkéntesek</h2>
           <p className="text-muted-foreground text-sm mb-6">
-            Kattints egy kártyára a bevállaláshoz (bejelentkezés szükséges) · Állandó mentés minden péntekenre érvényes
+            Kattints egy kártyára a bevállaláshoz (bejelentkezés szükséges) · Állandó mentés minden péntekenre érvényes · <strong>18:00–18:30</strong> között kell odaérni
           </p>
           <StoreGrid />
         </div>
