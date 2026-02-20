@@ -210,7 +210,7 @@ export default function StoreMapView({ stores, commitments, onRefresh, filterAva
                         </div>
 
                         <div className="text-xs text-teal-800 bg-teal-50 rounded-lg p-2 mb-2">
-                          🕕 <strong>18:00–18:30</strong> között kell odaérni
+                          🕕 <strong>18:00-kor</strong> kell odaérni
                         </div>
 
                         {user ? (

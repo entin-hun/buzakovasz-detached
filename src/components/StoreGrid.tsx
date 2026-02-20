@@ -375,7 +375,7 @@ export default function StoreGrid() {
       <div className="mt-8 rounded-2xl border border-border bg-card p-5" style={{ boxShadow: "var(--shadow-card)" }}>
         <h3 className="font-bold text-foreground mb-2 text-base">📦 Elosztási útmutató</h3>
         <p className="text-sm text-muted-foreground mb-3">
-          <strong>18:00–18:30 között</strong> kell odaérni az üzlethez. Fontos, hogy a pékáru minél szélesebb körben jusson el – <strong>elsősorban rászorulókhoz</strong>.
+          <strong>18:00-kor</strong> kell odaérni az üzlethez. Fontos, hogy a pékáru minél szélesebb körben jusson el – <strong>elsősorban rászorulókhoz</strong>.
         </p>
         <div className="grid sm:grid-cols-2 gap-3 text-sm">
           <div className="rounded-xl p-3 flex gap-3" style={{ background: "hsl(var(--teal-light))" }}>

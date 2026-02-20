@@ -41,6 +41,24 @@ export default function CommitModal({ store, onClose, onSuccess }: CommitModalPr
     if (!user) return;
     setLoading(true);
 
+    // Check max 3 locations limit
+    const { data: existingCommitments } = await supabase
+      .from("rescue_commitments")
+      .select("id, store_id")
+      .eq("user_id", user.id)
+      .eq("aktiv", true);
+
+    const uniqueStores = new Set((existingCommitments ?? []).map(c => c.store_id));
+    if (!uniqueStores.has(store.id) && uniqueStores.size >= 3) {
+      toast({
+        title: "Maximum 3 helyszín",
+        description: "Egy önkéntes legfeljebb 3 különböző helyszínt vállalhat be. Előbb mondj le egy másikról!",
+        variant: "destructive",
+      });
+      setLoading(false);
+      return;
+    }
+
     const payload = {
       user_id: user.id,
       store_id: store.id,
@@ -118,8 +136,9 @@ export default function CommitModal({ store, onClose, onSuccess }: CommitModalPr
           )}
 
           <div className="rounded-xl p-3 text-sm space-y-1.5" style={{ background: "hsl(var(--teal-light))", color: "hsl(var(--teal-dark))" }}>
-            <p>🕕 <strong>18:00–18:30 között</strong> kell odaérni az üzlethez (bezárás előtt/alatt).</p>
+            <p>🕕 <strong>18:00-kor</strong> kell odaérni az üzlethez (bezáráskor).</p>
             <p>🤝 Kérjük, oszd szét minél szélesebb körben – <strong>lehetőleg rászorulókkal is</strong> (hajléktalan szállók, közösségi hűtők).</p>
+            <p>📋 Max. <strong>3 helyszínt</strong> vállalhatsz be egyszerre.</p>
           </div>
 
           <div className="flex gap-3 pt-2">
