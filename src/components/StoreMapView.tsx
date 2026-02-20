@@ -36,7 +36,7 @@ const createIcon = (color: string, emoji: string) =>
     popupAnchor: [0, -36],
   });
 
-const bakeryIconFree = createIcon("#4DBFBA", "🌾");
+const bakeryIconFree = createIcon("hsl(174 25% 56%)", "🌾");
 const bakeryIconTaken = createIcon("#f59e0b", "🌾");
 const fridgeIcon = createIcon("#3b82f6", "❄️");
 const shelterIcon = createIcon("#8b5cf6", "🏠");
@@ -60,7 +60,7 @@ interface Commitment {
   tipus: string;
   datum: string | null;
   aktiv: boolean;
-  profiles: { keresztnev: string; telefonszam: string } | null;
+  profiles: { vezeteknev: string; keresztnev: string; telefonszam: string } | null;
 }
 
 interface Props {
@@ -91,8 +91,8 @@ export default function StoreMapView({ stores, commitments, onRefresh, filterAva
   const isFiltered = (store: Store) => {
     if (store.tipus !== "pekseg") return false;
     const sc = getStoreCommitments(store.id);
-    const hasPermanent = sc.some((c) => c.tipus === "allandó");
-    if (filterAvailable && hasPermanent) return true;
+    const isCovered = sc.length > 0;
+    if (filterAvailable && isCovered) return true;
     if (filterDate) {
       const covered = sc.some((c) => c.tipus === "allandó" || c.datum === filterDate);
       if (covered) return true;
@@ -104,8 +104,8 @@ export default function StoreMapView({ stores, commitments, onRefresh, filterAva
     if (store.tipus === "kozossegi_huto") return fridgeIcon;
     if (store.tipus === "hajlektalan_szallo") return shelterIcon;
     const sc = getStoreCommitments(store.id);
-    const hasPermanent = sc.some((c) => c.tipus === "allandó");
-    return hasPermanent ? bakeryIconTaken : bakeryIconFree;
+    const isCovered = sc.length > 0;
+    return isCovered ? bakeryIconTaken : bakeryIconFree;
   };
 
   const displayStores = (filterAvailable || filterDate)
@@ -117,7 +117,7 @@ export default function StoreMapView({ stores, commitments, onRefresh, filterAva
       {/* Legend */}
       <div className="flex flex-wrap gap-3 mb-3 text-xs">
         <div className="flex items-center gap-1.5">
-          <span className="w-3 h-3 rounded-full inline-block" style={{ background: "#4DBFBA" }}></span>
+          <span className="w-3 h-3 rounded-full inline-block" style={{ background: "hsl(174 25% 56%)" }}></span>
           <span className="text-muted-foreground">Szabad pékség</span>
         </div>
         <div className="flex items-center gap-1.5">
@@ -197,7 +197,7 @@ export default function StoreMapView({ stores, commitments, onRefresh, filterAva
                                 ) : (
                                   <Clock size={11} className="text-amber-500 flex-shrink-0" />
                                 )}
-                                <span className="font-medium">{c.profiles?.keresztnev ?? "?"}</span>
+                                <span className="font-medium">{c.profiles ? `${c.profiles.vezeteknev} ${c.profiles.keresztnev}` : "?"}</span>
                                 {c.profiles?.telefonszam && (
                                   <span className="text-gray-400">{c.profiles.telefonszam}</span>
                                 )}
@@ -222,7 +222,7 @@ export default function StoreMapView({ stores, commitments, onRefresh, filterAva
                             <button
                               onClick={() => setCommitStore(store)}
                               className="w-full text-xs font-semibold py-2 rounded-lg text-white transition-colors"
-                              style={{ background: "hsl(177 47% 48%)" }}
+                              style={{ background: "hsl(174 25% 56%)" }}
                             >
                               Bevállalom! 🍞
                             </button>
@@ -231,7 +231,7 @@ export default function StoreMapView({ stores, commitments, onRefresh, filterAva
                           <Link
                             to="/auth"
                             className="block w-full text-xs font-semibold py-2 rounded-lg text-center border-2 transition-colors"
-                            style={{ borderColor: "hsl(177 47% 48%)", color: "hsl(177 47% 38%)" }}
+                            style={{ borderColor: "hsl(174 25% 56%)", color: "hsl(174 25% 40%)" }}
                           >
                             Bejelentkezés a bevállaláshoz
                           </Link>

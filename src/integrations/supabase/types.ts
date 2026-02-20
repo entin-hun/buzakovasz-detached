@@ -85,6 +85,44 @@ export type Database = {
           },
         ]
       }
+      rescue_history: {
+        Row: {
+          created_at: string
+          het_datuma: string
+          id: string
+          megmentett_kg: number | null
+          store_id: string
+          tipus: string
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          het_datuma: string
+          id?: string
+          megmentett_kg?: number | null
+          store_id: string
+          tipus: string
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          het_datuma?: string
+          id?: string
+          megmentett_kg?: number | null
+          store_id?: string
+          tipus?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "rescue_history_store_id_fkey"
+            columns: ["store_id"]
+            isOneToOne: false
+            referencedRelation: "stores"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       stores: {
         Row: {
           cim: string

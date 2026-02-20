@@ -32,7 +32,7 @@
     --popover-foreground: 30 25% 15%;
 
     /* Teal brand color - matches buzakovász.hu */
-    --primary: 177 47% 52%;
+    --primary: 174 25% 56%;
     --primary-foreground: 0 0% 100%;
 
     --secondary: 40 35% 92%;
@@ -49,27 +49,27 @@
 
     --border: 40 20% 85%;
     --input: 40 20% 85%;
-    --ring: 177 47% 52%;
+    --ring: 174 25% 56%;
 
     --radius: 0.75rem;
 
     /* Custom tokens */
     --wheat: 40 60% 72%;
     --wheat-dark: 35 55% 45%;
-    --teal: 177 47% 52%;
-    --teal-dark: 177 47% 38%;
-    --teal-light: 177 47% 92%;
+    --teal: 174 25% 56%;
+    --teal-dark: 174 25% 40%;
+    --teal-light: 174 25% 92%;
     --cream: 40 30% 97%;
     --brown: 30 40% 25%;
 
     /* Gradients */
     --gradient-hero: linear-gradient(180deg, rgba(0,0,0,0.35) 0%, rgba(0,0,0,0.15) 60%, rgba(0,0,0,0.4) 100%);
-    --gradient-teal: linear-gradient(135deg, hsl(177 47% 52%), hsl(177 47% 42%));
+    --gradient-teal: linear-gradient(135deg, hsl(174 25% 56%), hsl(174 25% 46%));
     --gradient-warm: linear-gradient(135deg, hsl(40 60% 92%), hsl(35 50% 88%));
 
     /* Shadows */
     --shadow-card: 0 2px 20px -4px hsl(30 25% 15% / 0.12);
-    --shadow-teal: 0 4px 20px -4px hsl(177 47% 52% / 0.35);
+    --shadow-teal: 0 4px 20px -4px hsl(174 25% 56% / 0.35);
 
     --sidebar-background: 0 0% 98%;
     --sidebar-foreground: 240 5.3% 26.1%;
@@ -100,7 +100,7 @@
     --destructive-foreground: 0 0% 100%;
     --border: 30 20% 22%;
     --input: 30 20% 22%;
-    --ring: 177 47% 52%;
+    --ring: 174 25% 56%;
     --sidebar-background: 240 5.9% 10%;
     --sidebar-foreground: 240 4.8% 95.9%;
     --sidebar-primary: 224.3 76.3% 48%;
@@ -135,7 +135,7 @@
   .btn-teal:hover {
     background: hsl(var(--teal-dark));
     transform: translateY(-1px);
-    box-shadow: 0 6px 24px -4px hsl(177 47% 52% / 0.45);
+    box-shadow: 0 6px 24px -4px hsl(174 25% 56% / 0.45);
   }
 
   .btn-outline-teal {
