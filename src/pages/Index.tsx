@@ -1,14 +1,68 @@
+import { useState, useEffect } from "react";
 import NavBar from "@/components/NavBar";
 import StoreGrid from "@/components/StoreGrid";
 import { useAuth } from "@/contexts/AuthContext";
 import { Link } from "react-router-dom";
 import { Heart, Clock, ShieldCheck } from "lucide-react";
+import { supabase } from "@/integrations/supabase/client";
 import heroBread from "@/assets/hero-bread.jpg";
 import buzakovaszLogo from "@/assets/buzakovasz-logo.png";
 import euSolidarityLogo from "@/assets/eu-solidarity-logo.png";
 
+interface HistoryEntry {
+  id: string;
+  user_id: string;
+  store_id: string;
+  het_datuma: string;
+  tipus: string;
+  megmentett_kg: number | null;
+  created_at: string;
+  profiles?: { vezeteknev: string; keresztnev: string } | null;
+  stores?: { nev: string } | null;
+}
+
 const Index = () => {
-  const { user } = useAuth();
+  const { user, profile } = useAuth();
+  const [history, setHistory] = useState<HistoryEntry[]>([]);
+  const [editingKg, setEditingKg] = useState<string | null>(null);
+  const [kgValue, setKgValue] = useState("");
+
+  useEffect(() => {
+    fetchHistory();
+  }, []);
+
+  const fetchHistory = async () => {
+    const [historyRes, profilesRes, storesRes] = await Promise.all([
+      supabase.from("rescue_history").select("*").order("het_datuma", { ascending: false }),
+      supabase.from("profiles").select("user_id, vezeteknev, keresztnev"),
+      supabase.from("stores").select("id, nev"),
+    ]);
+
+    const profileMap: Record<string, { vezeteknev: string; keresztnev: string }> = {};
+    (profilesRes.data ?? []).forEach((p) => { profileMap[p.user_id] = p; });
+
+    const storeMap: Record<string, { nev: string }> = {};
+    (storesRes.data ?? []).forEach((s) => { storeMap[s.id] = s; });
+
+    const enriched = (historyRes.data ?? []).map((h) => ({
+      ...h,
+      profiles: profileMap[h.user_id] ?? null,
+      stores: storeMap[h.store_id] ?? null,
+    }));
+
+    setHistory(enriched);
+  };
+
+  const handleSaveKg = async (historyId: string) => {
+    const kg = parseFloat(kgValue);
+    if (isNaN(kg) || kg < 0) return;
+    await supabase.from("rescue_history").update({ megmentett_kg: kg }).eq("id", historyId);
+    setEditingKg(null);
+    setKgValue("");
+    fetchHistory();
+  };
+
+  const totalKg = history.reduce((sum, h) => sum + (h.megmentett_kg ?? 0), 0);
 
   return (
     <div className="min-h-screen bg-background">
@@ -65,6 +119,82 @@ const Index = () => {
           </p>
           <StoreGrid />
         </div>
+      </section>
+
+      {/* Rescue History */}
+      <section className="px-4 max-w-6xl mx-auto pb-10">
+        <h2 className="text-2xl font-bold text-foreground mb-2">📊 Mentéstörténet</h2>
+        <p className="text-muted-foreground text-sm mb-4">
+          Korábbi heti mentések összesítése. Összesen megmentett pékáru: <strong className="text-foreground">{totalKg.toFixed(1)} kg</strong>
+        </p>
+        {history.length > 0 ? (
+          <div className="overflow-x-auto rounded-2xl border border-border" style={{ boxShadow: "var(--shadow-card)" }}>
+            <table className="w-full text-sm">
+              <thead>
+                <tr style={{ background: "hsl(var(--teal-light))", color: "hsl(var(--teal-dark))" }}>
+                  <th className="text-left px-4 py-3 font-semibold">Hét</th>
+                  <th className="text-left px-4 py-3 font-semibold">Üzlet</th>
+                  <th className="text-left px-4 py-3 font-semibold">Önkéntes</th>
+                  <th className="text-left px-4 py-3 font-semibold">Típus</th>
+                  <th className="text-left px-4 py-3 font-semibold">Megmentett (kg)</th>
+                </tr>
+              </thead>
+              <tbody className="bg-card divide-y divide-border">
+                {history.map((h) => (
+                  <tr key={h.id} className="hover:bg-muted/50 transition-colors">
+                    <td className="px-4 py-3 font-medium">{h.het_datuma}</td>
+                    <td className="px-4 py-3">{h.stores?.nev?.replace("Búzakovász – ", "") ?? "–"}</td>
+                    <td className="px-4 py-3">
+                      {h.profiles ? `${h.profiles.vezeteknev} ${h.profiles.keresztnev}` : "–"}
+                    </td>
+                    <td className="px-4 py-3">
+                      {h.tipus === "allandó" ? (
+                        <span className="badge-taken">Állandó</span>
+                      ) : (
+                        <span className="inline-flex items-center gap-1 bg-blue-100 text-blue-700 rounded-full px-3 py-1 text-xs font-semibold">Egyszeri</span>
+                      )}
+                    </td>
+                    <td className="px-4 py-3">
+                      {user && h.user_id === user.id && !h.megmentett_kg ? (
+                        editingKg === h.id ? (
+                          <div className="flex items-center gap-2">
+                            <input
+                              type="number"
+                              step="0.1"
+                              min="0"
+                              value={kgValue}
+                              onChange={(e) => setKgValue(e.target.value)}
+                              className="w-20 px-2 py-1 rounded border border-border bg-background text-foreground text-sm"
+                              placeholder="kg"
+                            />
+                            <button onClick={() => handleSaveKg(h.id)} className="btn-teal text-xs px-2 py-1">
+                              ✓
+                            </button>
+                          </div>
+                        ) : (
+                          <button
+                            onClick={() => { setEditingKg(h.id); setKgValue(""); }}
+                            className="btn-outline-teal text-xs px-3 py-1"
+                          >
+                            Megadás
+                          </button>
+                        )
+                      ) : (
+                        <span className={h.megmentett_kg ? "font-bold text-foreground" : "text-muted-foreground"}>
+                          {h.megmentett_kg ? `${h.megmentett_kg} kg` : "–"}
+                        </span>
+                      )}
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        ) : (
+          <div className="rounded-2xl border border-border bg-card p-8 text-center text-muted-foreground" style={{ boxShadow: "var(--shadow-card)" }}>
+            Még nincs mentéstörténet. A rendszer minden pénteken 20:00-kor archiválja a heti mentéseket.
+          </div>
+        )}
       </section>
 
       {/* Footer */}

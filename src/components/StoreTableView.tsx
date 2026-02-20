@@ -22,7 +22,7 @@ interface Commitment {
   tipus: string;
   datum: string | null;
   aktiv: boolean;
-  profiles: { keresztnev: string; telefonszam: string } | null;
+  profiles: { vezeteknev: string; keresztnev: string; telefonszam: string } | null;
 }
 
 interface Props {
@@ -42,9 +42,9 @@ export default function StoreTableView({ stores, commitments, onRefresh, filterA
 
   const filteredStores = bakeries.filter((store) => {
     const storeCommitments = commitments.filter((c) => c.store_id === store.id && c.aktiv);
-    const hasPermanent = storeCommitments.some((c) => c.tipus === "allandó");
+    const isCovered = storeCommitments.length > 0;
 
-    if (filterAvailable && hasPermanent) return false;
+    if (filterAvailable && isCovered) return false;
 
     if (filterDate) {
       const hasForDate = storeCommitments.some(
@@ -85,7 +85,7 @@ export default function StoreTableView({ stores, commitments, onRefresh, filterA
           <tbody className="bg-card divide-y divide-border">
             {displayStores.map((store) => {
               const storeCommitments = commitments.filter((c) => c.store_id === store.id && c.aktiv);
-              const hasPermanent = storeCommitments.some((c) => c.tipus === "allandó");
+              const isCovered = storeCommitments.length > 0;
               const myCommitment = user ? storeCommitments.find((c) => c.user_id === user.id) : null;
 
               return (
@@ -110,13 +110,15 @@ export default function StoreTableView({ stores, commitments, onRefresh, filterA
                       <span className="text-muted-foreground">–</span>
                     )}
                   </td>
-                  <td className="px-4 py-3">
-                    {hasPermanent ? (
-                      <span className="badge-taken">Állandó</span>
-                    ) : storeCommitments.length > 0 ? (
-                      <span className="inline-flex items-center gap-1 bg-blue-100 text-blue-700 rounded-full px-3 py-1 text-xs font-semibold">
-                        Egyszeri
-                      </span>
+                   <td className="px-4 py-3">
+                    {isCovered ? (
+                      storeCommitments.some((c) => c.tipus === "allandó") ? (
+                        <span className="badge-taken">Állandó</span>
+                      ) : (
+                        <span className="inline-flex items-center gap-1 bg-blue-100 text-blue-700 rounded-full px-3 py-1 text-xs font-semibold">
+                          Egyszeri
+                        </span>
+                      )
                     ) : (
                       <span className="badge-free">Szabad</span>
                     )}
@@ -134,7 +136,7 @@ export default function StoreTableView({ stores, commitments, onRefresh, filterA
                               <Clock size={11} style={{ color: "hsl(35 80% 50%)" }} className="flex-shrink-0" />
                             )}
                             <span className="font-medium">
-                              {c.profiles?.keresztnev ?? "?"}
+                              {c.profiles ? `${c.profiles.vezeteknev} ${c.profiles.keresztnev}` : "?"}
                             </span>
                             {c.datum && <span className="text-muted-foreground">({c.datum})</span>}
                             {user && c.user_id === user.id && (

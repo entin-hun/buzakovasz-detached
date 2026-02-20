@@ -41,7 +41,7 @@ export default function NavBar() {
               <>
                 <div className="hidden sm:flex items-center gap-2 text-sm text-muted-foreground">
                   <User size={16} className="text-primary" />
-                  <span>{profile ? `${profile.keresztnev}` : user.email}</span>
+                  <span>{profile ? `${profile.vezeteknev} ${profile.keresztnev}` : user.email}</span>
                 </div>
                 <button
                   onClick={handleSignOut}

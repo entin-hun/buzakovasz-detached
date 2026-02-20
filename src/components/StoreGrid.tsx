@@ -28,7 +28,7 @@ export interface Commitment {
   tipus: string;
   datum: string | null;
   aktiv: boolean;
-  profiles: { keresztnev: string; telefonszam: string } | null;
+  profiles: { vezeteknev: string; keresztnev: string; telefonszam: string } | null;
 }
 
 // ---- StoreCard ----
@@ -43,7 +43,7 @@ function StoreCard({ store, commitments, myCommitment, onRefresh }: {
   const [showModal, setShowModal] = useState(false);
 
   const activeCommitments = commitments.filter((c) => c.aktiv);
-  const hasPermanent = activeCommitments.some((c) => c.tipus === "allandó");
+  const isCovered = activeCommitments.length > 0;
 
   const handleCancel = async (commitmentId: string) => {
     const { error } = await supabase.from("rescue_commitments").delete().eq("id", commitmentId);
@@ -74,7 +74,7 @@ function StoreCard({ store, commitments, myCommitment, onRefresh }: {
             )}
           </div>
           <div className="ml-3">
-            {hasPermanent ? (
+           {isCovered ? (
               <span className="badge-taken">Foglalt</span>
             ) : (
               <span className="badge-free">Szabad</span>
@@ -99,7 +99,7 @@ function StoreCard({ store, commitments, myCommitment, onRefresh }: {
                     <Clock size={14} style={{ color: "hsl(35 80% 50%)" }} className="flex-shrink-0" />
                   )}
                   <div>
-                    <span className="font-medium text-foreground">{c.profiles?.keresztnev ?? "Ismeretlen"}</span>
+                    <span className="font-medium text-foreground">{c.profiles ? `${c.profiles.vezeteknev} ${c.profiles.keresztnev}` : "Ismeretlen"}</span>
                     {c.profiles?.telefonszam && (
                       <span className="text-muted-foreground ml-2 text-xs flex items-center gap-1">
                         <Phone size={10} /> {c.profiles.telefonszam}
@@ -175,10 +175,10 @@ export default function StoreGrid() {
     const [storesRes, commitmentsRes, profilesRes] = await Promise.all([
       supabase.from("stores").select("*").order("tipus").order("nev"),
       supabase.from("rescue_commitments").select("*").eq("aktiv", true).order("created_at"),
-      supabase.from("profiles").select("user_id, keresztnev, telefonszam"),
+      supabase.from("profiles").select("user_id, vezeteknev, keresztnev, telefonszam"),
     ]);
 
-    const profileMap: Record<string, { keresztnev: string; telefonszam: string }> = {};
+    const profileMap: Record<string, { vezeteknev: string; keresztnev: string; telefonszam: string }> = {};
     (profilesRes.data ?? []).forEach((p) => { profileMap[p.user_id] = p; });
 
     if (storesRes.data) setStores(storesRes.data as Store[]);
@@ -217,7 +217,7 @@ export default function StoreGrid() {
 
   const bakeries = stores.filter((s) => s.tipus === "pekseg");
   const coveredCount = bakeries.filter((s) =>
-    commitments.some((c) => c.store_id === s.id && c.aktiv && c.tipus === "allandó")
+    commitments.some((c) => c.store_id === s.id && c.aktiv)
   ).length;
 
   const nextFriday = (() => {
@@ -230,8 +230,8 @@ export default function StoreGrid() {
 
   const filteredBakeries = bakeries.filter((store) => {
     const sc = commitments.filter((c) => c.store_id === store.id && c.aktiv);
-    const hasPermanent = sc.some((c) => c.tipus === "allandó");
-    if (filterAvailable && hasPermanent) return false;
+    const isCovered = sc.length > 0;
+    if (filterAvailable && isCovered) return false;
     if (filterDate) {
       const covered = sc.some((c) => c.tipus === "allandó" || c.datum === filterDate);
       if (covered) return false;
