@@ -4,6 +4,8 @@ import { useAuth } from "@/contexts/AuthContext";
 import { Link } from "react-router-dom";
 import { Heart, Clock, ShieldCheck } from "lucide-react";
 import heroBread from "@/assets/hero-bread.jpg";
+import buzakovaszLogo from "@/assets/buzakovasz-logo.png";
+import euSolidarityLogo from "@/assets/eu-solidarity-logo.png";
 
 const Index = () => {
   const { user } = useAuth();
@@ -27,7 +29,7 @@ const Index = () => {
             Pékáru-mentés
           </h1>
           <p className="text-white/90 max-w-lg text-sm md:text-base" style={{ textShadow: "0 1px 6px rgba(0,0,0,0.4)" }}>
-            Minden <strong>pénteken 18:30-kor</strong> megmaradó kenyerek és péksütemények önkéntes megmentése a Búzakovász pékségekből.
+            Minden <strong>pénteken 18:00-kor</strong> megmaradó kenyerek és péksütemények önkéntes megmentése a Búzakovász pékségekből.
           </p>
           {!user && (
             <Link to="/auth" className="mt-5 inline-block btn-teal text-sm">
@@ -41,8 +43,8 @@ const Index = () => {
       <section className="py-10 px-4 max-w-6xl mx-auto">
         <div className="grid sm:grid-cols-3 gap-4 mb-12">
           {[
-            { icon: <Clock size={22} />, title: "Minden pénteken 18:30", text: "Az üzletek bezárás előtt összegyűjtik a megmaradó pékárut." },
-            { icon: <Heart size={22} />, title: "Önkéntes bevállalás", text: "Regisztrálj és vállalj be egy vagy több üzletet – akár rendszeresen!" },
+            { icon: <Clock size={22} />, title: "Minden pénteken 18:00", text: "Az üzletek bezáráskor összegyűjtik a megmaradó pékárut. 18:00-kor kell odaérni." },
+            { icon: <Heart size={22} />, title: "Önkéntes bevállalás", text: "Regisztrálj és vállalj be max. 3 üzletet – akár rendszeresen!" },
             { icon: <ShieldCheck size={22} />, title: "Átlátható rendszer", text: "Mindenki látja, melyik üzletből ki vállalja el a mentést." },
           ].map(item => (
             <div key={item.title} className="rounded-2xl p-5 border border-border bg-card text-center" style={{ boxShadow: "var(--shadow-card)" }}>
@@ -59,23 +61,38 @@ const Index = () => {
         <div className="mb-4">
           <h2 className="text-2xl font-bold text-foreground mb-1">Üzletek &amp; Önkéntesek</h2>
           <p className="text-muted-foreground text-sm mb-6">
-            Kattints egy kártyára a bevállaláshoz (bejelentkezés szükséges) · Állandó mentés minden péntekenre érvényes · <strong>18:00–18:30</strong> között kell odaérni
+            Kattints egy kártyára a bevállaláshoz (bejelentkezés szükséges) · Állandó mentés minden péntekenre érvényes · <strong>18:00-kor</strong> kell odaérni · Max. 3 helyszín/önkéntes
           </p>
           <StoreGrid />
         </div>
       </section>
 
       {/* Footer */}
-      <footer className="mt-12 border-t border-border py-6 px-4">
-        <div className="max-w-6xl mx-auto flex flex-col sm:flex-row items-center justify-between gap-3 text-sm text-muted-foreground">
-          <div className="flex items-center gap-2">
-            <span>🌾</span>
-            <span className="font-medium" style={{ fontFamily: "'Playfair Display', serif" }}>Búzakovász</span>
-            <span>Pékáru-mentés</span>
+      <footer className="mt-12 border-t border-border bg-card">
+        <div className="max-w-6xl mx-auto px-4 py-8">
+          {/* Partner info */}
+          <div className="flex flex-col items-center text-center mb-6">
+            <p className="text-sm text-muted-foreground mb-4 max-w-xl">
+              Ez a weboldal a <strong className="text-foreground">Circooler.Solutions</strong> és az <strong className="text-foreground">ÁtalakítóTér</strong> közös kezdeményezése, az <strong className="text-foreground">Európai Szolidaritási Testület</strong> támogatásával.
+            </p>
+            <img src={euSolidarityLogo} alt="European Solidarity Corps – Funded by the European Union" className="h-14 w-auto mb-4" />
           </div>
-          <a href="https://www.buzakovasz.hu" target="_blank" rel="noopener noreferrer" className="hover:text-primary transition-colors">
-            buzakovasz.hu →
-          </a>
+
+          <div className="border-t border-border pt-6 flex flex-col sm:flex-row items-center justify-between gap-4">
+            <div className="flex items-center gap-3">
+              <img src={buzakovaszLogo} alt="Búzakovász" className="h-10 w-auto" />
+              <span className="text-sm text-muted-foreground">Pékáru-mentés koordináció</span>
+            </div>
+            <a
+              href="https://www.buzakovasz.hu"
+              target="_blank"
+              rel="noopener noreferrer"
+              className="inline-flex items-center gap-2 text-sm font-bold px-5 py-2.5 rounded-xl transition-colors"
+              style={{ background: "hsl(var(--teal))", color: "#fff" }}
+            >
+              🌐 Búzakovász hivatalos weboldala →
+            </a>
+          </div>
         </div>
       </footer>
     </div>
