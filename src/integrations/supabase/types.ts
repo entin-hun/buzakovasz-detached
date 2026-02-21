@@ -90,6 +90,7 @@ export type Database = {
           created_at: string
           het_datuma: string
           id: string
+          image_url: string | null
           megmentett_kg: number | null
           store_id: string
           tipus: string
@@ -99,6 +100,7 @@ export type Database = {
           created_at?: string
           het_datuma: string
           id?: string
+          image_url?: string | null
           megmentett_kg?: number | null
           store_id: string
           tipus: string
@@ -108,6 +110,7 @@ export type Database = {
           created_at?: string
           het_datuma?: string
           id?: string
+          image_url?: string | null
           megmentett_kg?: number | null
           store_id?: string
           tipus?: string
