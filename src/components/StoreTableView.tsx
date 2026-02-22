@@ -128,8 +128,8 @@ export default function StoreTableView({ stores, commitments, onRefresh, filterA
                       {storeCommitments.length === 0 ? (
                         <span className="text-xs text-muted-foreground italic">–</span>
                       ) : (
-                        storeCommitments.slice(0, 2).map((c) => (
-                          <div key={c.id} className="flex items-center gap-1.5 text-xs">
+                         storeCommitments.slice(0, 3).map((c) => (
+                          <div key={c.id} className="flex items-center gap-1.5 text-xs flex-wrap">
                             {c.tipus === "allandó" ? (
                               <CheckCircle2 size={11} className="text-primary flex-shrink-0" />
                             ) : (
@@ -138,6 +138,9 @@ export default function StoreTableView({ stores, commitments, onRefresh, filterA
                             <span className="font-medium">
                               {c.profiles ? `${c.profiles.vezeteknev} ${c.profiles.keresztnev}` : "?"}
                             </span>
+                            {c.profiles?.telefonszam && (
+                              <span className="text-muted-foreground">📞 {c.profiles.telefonszam}</span>
+                            )}
                             {c.datum && <span className="text-muted-foreground">({c.datum})</span>}
                             {user && c.user_id === user.id && (
                               <button
