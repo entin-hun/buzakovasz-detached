@@ -17,6 +17,21 @@ interface CommitModalProps {
   onSuccess: () => void;
 }
 
+// Generate upcoming Fridays
+function getUpcomingFridays(count: number): string[] {
+  const fridays: string[] = [];
+  const d = new Date();
+  // Find next Friday
+  const day = d.getDay();
+  const diff = (5 - day + 7) % 7 || 7;
+  d.setDate(d.getDate() + diff);
+  for (let i = 0; i < count; i++) {
+    fridays.push(new Date(d).toISOString().split("T")[0]);
+    d.setDate(d.getDate() + 7);
+  }
+  return fridays;
+}
+
 export default function CommitModal({ store, onClose, onSuccess }: CommitModalProps) {
   const { user } = useAuth();
   const { toast } = useToast();
@@ -24,17 +39,11 @@ export default function CommitModal({ store, onClose, onSuccess }: CommitModalPr
   const [datum, setDatum] = useState("");
   const [loading, setLoading] = useState(false);
 
-  const nextFriday = (() => {
-    const d = new Date();
-    const day = d.getDay();
-    const diff = (5 - day + 7) % 7 || 7;
-    d.setDate(d.getDate() + diff);
-    return d.toISOString().split("T")[0];
-  })();
+  const fridays = getUpcomingFridays(8);
 
   useEffect(() => {
-    setDatum(nextFriday);
-  }, [nextFriday]);
+    setDatum(fridays[0]);
+  }, []);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -124,20 +133,33 @@ export default function CommitModal({ store, onClose, onSuccess }: CommitModalPr
 
           {tipus === "egyszeri" && (
             <div>
-              <label className="block text-sm font-medium text-foreground mb-1.5">Dátum (péntek)</label>
-              <input
-                type="date"
-                value={datum}
-                onChange={(e) => setDatum(e.target.value)}
-                required
-                className="w-full px-4 py-2.5 rounded-xl border border-border bg-background text-foreground focus:outline-none focus:ring-2 focus:ring-primary focus:border-transparent transition-all"
-              />
+              <label className="block text-sm font-medium text-foreground mb-1.5">Válassz pénteket</label>
+              <div className="grid grid-cols-2 gap-2 max-h-48 overflow-y-auto">
+                {fridays.map((f) => {
+                  const d = new Date(f);
+                  const label = d.toLocaleDateString("hu-HU", { month: "long", day: "numeric" });
+                  return (
+                    <button
+                      key={f}
+                      type="button"
+                      onClick={() => setDatum(f)}
+                      className={`p-2 rounded-xl border text-sm text-left transition-all ${
+                        datum === f
+                          ? "border-primary bg-primary/10 text-primary font-semibold"
+                          : "border-border text-muted-foreground hover:border-primary/50"
+                      }`}
+                    >
+                      📅 {label}
+                    </button>
+                  );
+                })}
+              </div>
             </div>
           )}
 
           <div className="rounded-xl p-3 text-sm space-y-1.5" style={{ background: "hsl(var(--teal-light))", color: "hsl(var(--teal-dark))" }}>
             <p>🕕 <strong>18:00-kor</strong> kell odaérni az üzlethez (bezáráskor).</p>
-            <p>🤝 Kérjük, oszd szét minél szélesebb körben – <strong>lehetőleg rászorulókkal is</strong> (hajléktalan szállók, közösségi hűtők).</p>
+            <p>🤝 Kérjük, oszd szét minél szélesebb körben – <strong>lehetőleg rászorulókkal is</strong>.</p>
             <p>📋 Max. <strong>3 helyszínt</strong> vállalhatsz be egyszerre.</p>
           </div>
 
