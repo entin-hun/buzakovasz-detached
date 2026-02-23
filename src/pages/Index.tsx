@@ -119,7 +119,7 @@ const Index = () => {
         <div className="grid sm:grid-cols-3 gap-4 mb-12">
           {[
             { icon: <Clock size={22} />, title: "Minden pénteken 18:00", text: "Az üzletek bezáráskor összegyűjtik a megmaradó pékárut. 18:00-kor kell odaérni." },
-            { icon: <Heart size={22} />, title: "Önkéntes bevállalás", text: "Regisztrálj és vállalj be max. 3 üzletet – akár rendszeresen!" },
+            { icon: <Heart size={22} />, title: "Önkéntes bevállalás", text: "Regisztrálj és vállalj be max. 2 közeli üzletet – akár rendszeresen!" },
             { icon: <ShieldCheck size={22} />, title: "Átlátható rendszer", text: "Mindenki látja, melyik üzletből ki vállalja el a mentést." },
           ].map(item => (
             <div key={item.title} className="rounded-2xl p-5 border border-border bg-card text-center" style={{ boxShadow: "var(--shadow-card)" }}>
@@ -135,7 +135,7 @@ const Index = () => {
         <div className="mb-4">
           <h2 className="text-2xl font-bold text-foreground mb-1">Üzletek &amp; Önkéntesek</h2>
           <p className="text-muted-foreground text-sm mb-6">
-            Kattints egy kártyára a bevállaláshoz (bejelentkezés szükséges) · Állandó mentés minden péntekenre érvényes · <strong>18:00-kor</strong> kell odaérni · Max. 3 helyszín/önkéntes
+            Kattints egy kártyára a bevállaláshoz (bejelentkezés szükséges) · Állandó mentés minden péntekenre érvényes · <strong>18:00-kor</strong> kell odaérni · Max. 2 helyszín/önkéntes
           </p>
           <StoreGrid />
         </div>
@@ -170,7 +170,9 @@ const Index = () => {
                       {h.profiles ? `${h.profiles.vezeteknev} ${h.profiles.keresztnev}` : "–"}
                     </td>
                     <td className="px-4 py-3 hidden sm:table-cell text-muted-foreground">
-                      {h.profiles?.telefonszam ?? "–"}
+                      {h.profiles?.telefonszam ? (
+                        <a href={`tel:${h.profiles.telefonszam}`} className="hover:text-primary transition-colors">{h.profiles.telefonszam}</a>
+                      ) : "–"}
                     </td>
                     <td className="px-4 py-3">
                       {h.tipus === "allandó" ? (
@@ -197,19 +199,40 @@ const Index = () => {
                       )}
                     </td>
                     <td className="px-4 py-3">
-                      {h.image_url ? (
-                        <button onClick={() => setSelectedImage(h.image_url)} className="flex items-center gap-1 text-primary hover:underline text-xs">
-                          <Camera size={12} /> Megtekintés
-                        </button>
-                      ) : user && h.user_id === user.id ? (
-                        <label className="cursor-pointer flex items-center gap-1 text-xs text-muted-foreground hover:text-primary transition-colors">
-                          <Camera size={12} /> {uploadingPhoto === h.id ? "Feltöltés..." : "Fotó"}
-                          <input type="file" accept="image/*" className="hidden" disabled={uploadingPhoto === h.id}
-                            onChange={(e) => { const f = e.target.files?.[0]; if (f) handlePhotoUpload(h.id, f); }} />
-                        </label>
-                      ) : (
-                        <span className="text-muted-foreground text-xs">–</span>
-                      )}
+                      {(() => {
+                        const storeName = h.stores?.nev?.toLowerCase() ?? "";
+                        const images: string[] = [];
+                        if (storeName.includes("fodor") || storeName.includes("keleti") || storeName.includes("csalogány")) {
+                          images.push("/images/fodor_keleti_csalogany_1.jpg", "/images/fodor_keleti_csalogany_2.jpg");
+                        }
+                        if (storeName.includes("borsó")) {
+                          images.push("/images/borso_utca.jpg");
+                        }
+                        if (h.image_url && !images.includes(h.image_url)) {
+                          images.push(h.image_url);
+                        }
+                        if (images.length > 0) {
+                          return (
+                            <div className="flex gap-1.5">
+                              {images.map((img, i) => (
+                                <button key={i} onClick={() => setSelectedImage(img)} className="flex-shrink-0">
+                                  <img src={img} alt="Mentés fotó" className="w-10 h-10 rounded-lg object-cover border border-border hover:opacity-80 transition-opacity cursor-pointer" />
+                                </button>
+                              ))}
+                            </div>
+                          );
+                        }
+                        if (user && h.user_id === user.id) {
+                          return (
+                            <label className="cursor-pointer flex items-center gap-1 text-xs text-muted-foreground hover:text-primary transition-colors">
+                              <Camera size={12} /> {uploadingPhoto === h.id ? "Feltöltés..." : "Fotó"}
+                              <input type="file" accept="image/*" className="hidden" disabled={uploadingPhoto === h.id}
+                                onChange={(e) => { const f = e.target.files?.[0]; if (f) handlePhotoUpload(h.id, f); }} />
+                            </label>
+                          );
+                        }
+                        return <span className="text-muted-foreground text-xs">–</span>;
+                      })()}
                     </td>
                   </tr>
                 ))}
