@@ -58,10 +58,10 @@ export default function CommitModal({ store, onClose, onSuccess }: CommitModalPr
       .eq("aktiv", true);
 
     const uniqueStores = new Set((existingCommitments ?? []).map(c => c.store_id));
-    if (!uniqueStores.has(store.id) && uniqueStores.size >= 3) {
+    if (!uniqueStores.has(store.id) && uniqueStores.size >= 2) {
       toast({
-        title: "Maximum 3 helyszín",
-        description: "Egy önkéntes legfeljebb 3 különböző helyszínt vállalhat be. Előbb mondj le egy másikról!",
+        title: "Maximum 2 helyszín",
+        description: "Egy önkéntes legfeljebb 2 különböző (egymáshoz közeli) helyszínt vállalhat be. Előbb mondj le egy másikról!",
         variant: "destructive",
       });
       setLoading(false);
@@ -160,7 +160,8 @@ export default function CommitModal({ store, onClose, onSuccess }: CommitModalPr
           <div className="rounded-xl p-3 text-sm space-y-1.5" style={{ background: "hsl(var(--teal-light))", color: "hsl(var(--teal-dark))" }}>
             <p>🕕 <strong>18:00-kor</strong> kell odaérni az üzlethez (bezáráskor).</p>
             <p>🤝 Kérjük, oszd szét minél szélesebb körben – <strong>lehetőleg rászorulókkal is</strong>.</p>
-            <p>📋 Max. <strong>3 helyszínt</strong> vállalhatsz be egyszerre.</p>
+            <p>📋 Max. <strong>2 helyszínt</strong> vállalhatsz be egyszerre (lehetőleg egymáshoz közelieket).</p>
+            <p>🤝 Kérjük, egyeztesd az üzletben dolgozókkal, mikor érsz oda, és tartsd magad hozzá!</p>
           </div>
 
           <div className="flex gap-3 pt-2">

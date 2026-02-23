@@ -101,9 +101,9 @@ function StoreCard({ store, commitments, myCommitment, onRefresh }: {
                   <div>
                     <span className="font-medium text-foreground">{c.profiles ? `${c.profiles.vezeteknev} ${c.profiles.keresztnev}` : "Ismeretlen"}</span>
                     {c.profiles?.telefonszam && (
-                      <span className="text-muted-foreground ml-2 text-xs flex items-center gap-1">
+                      <a href={`tel:${c.profiles.telefonszam}`} className="text-muted-foreground ml-2 text-xs flex items-center gap-1 hover:text-primary transition-colors">
                         <Phone size={10} /> {c.profiles.telefonszam}
-                      </span>
+                      </a>
                     )}
                   </div>
                 </div>

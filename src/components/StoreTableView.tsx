@@ -139,7 +139,7 @@ export default function StoreTableView({ stores, commitments, onRefresh, filterA
                               {c.profiles ? `${c.profiles.vezeteknev} ${c.profiles.keresztnev}` : "?"}
                             </span>
                             {c.profiles?.telefonszam && (
-                              <span className="text-muted-foreground">📞 {c.profiles.telefonszam}</span>
+                              <a href={`tel:${c.profiles.telefonszam}`} className="text-muted-foreground hover:text-primary transition-colors">📞 {c.profiles.telefonszam}</a>
                             )}
                             {c.datum && <span className="text-muted-foreground">({c.datum})</span>}
                             {user && c.user_id === user.id && (

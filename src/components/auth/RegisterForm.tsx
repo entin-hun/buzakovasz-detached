@@ -19,6 +19,7 @@ export default function RegisterForm({ onSwitchToLogin }: RegisterFormProps) {
     passwordConfirm: "",
   });
   const [loading, setLoading] = useState(false);
+  const [showResendInfo, setShowResendInfo] = useState(false);
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     setForm(prev => ({ ...prev, [e.target.name]: e.target.value }));
@@ -36,6 +37,7 @@ export default function RegisterForm({ onSwitchToLogin }: RegisterFormProps) {
     }
     setLoading(true);
 
+    // Try to sign up
     const { data, error } = await supabase.auth.signUp({
       email: form.email,
       password: form.password,
@@ -43,34 +45,71 @@ export default function RegisterForm({ onSwitchToLogin }: RegisterFormProps) {
     });
 
     if (error) {
-      toast({ title: "Regisztrációs hiba", description: error.message, variant: "destructive" });
+      // If the user already exists, suggest login
+      if (error.message.includes("already registered") || error.message.includes("already been registered")) {
+        toast({
+          title: "Ez az e-mail már regisztrálva van!",
+          description: "Próbálj bejelentkezni a meglévő fiókoddal, és onnan folytathatod ahol tartottál.",
+        });
+        setShowResendInfo(true);
+      } else {
+        toast({ title: "Regisztrációs hiba", description: error.message, variant: "destructive" });
+      }
+      setLoading(false);
+      return;
+    }
+
+    // Check if signup returned a user but identities is empty (means user already exists in some providers)
+    if (data.user && data.user.identities && data.user.identities.length === 0) {
+      toast({
+        title: "Ez az e-mail már regisztrálva van! 📧",
+        description: "Jelentkezz be a meglévő fiókoddal, és onnan folytathatod ahol tartottál.",
+      });
+      setShowResendInfo(true);
       setLoading(false);
       return;
     }
 
     if (data.user) {
-      const { error: profileError } = await supabase.from("profiles").insert({
+      // Try to create profile - use upsert to handle potential re-registration
+      const { error: profileError } = await supabase.from("profiles").upsert({
         user_id: data.user.id,
         vezeteknev: form.vezeteknev.trim(),
         keresztnev: form.keresztnev.trim(),
         telefonszam: form.telefonszam.trim(),
-      });
+      }, { onConflict: "user_id" });
 
       if (profileError) {
-        toast({ title: "Profil hiba", description: "Profil létrehozása sikertelen.", variant: "destructive" });
+        console.error("Profile creation error:", profileError);
+        // Don't block registration if profile fails - ProfileCompletionModal will catch it
       } else {
         await refreshProfile();
-        toast({
-          title: "Sikeres regisztráció! 🍞",
-          description: "Ellenőrizd az e-mail fiókodat a megerősítéshez.",
-        });
       }
+
+      toast({
+        title: "Sikeres regisztráció! 🍞",
+        description: "Ellenőrizd az e-mail fiókodat a megerősítő linkért. Utána bejelentkezhetsz!",
+      });
     }
     setLoading(false);
   };
 
   return (
     <form onSubmit={handleSubmit} className="space-y-4">
+      {showResendInfo && (
+        <div className="rounded-xl p-4 text-sm space-y-2" style={{ background: "hsl(var(--teal-light))", color: "hsl(var(--teal-dark))" }}>
+          <p className="font-semibold">📧 Már van fiókod ezzel az e-mail címmel!</p>
+          <p>Jelentkezz be az alábbi gombbal, és folytasd onnan ahol abbahagytad. Ha elfelejtetted a jelszavad, írj nekünk.</p>
+          <button
+            type="button"
+            onClick={onSwitchToLogin}
+            className="btn-teal w-full text-sm py-2 mt-2"
+          >
+            Bejelentkezés →
+          </button>
+        </div>
+      )}
+
       <div className="grid grid-cols-2 gap-3">
         <div>
           <label className="block text-sm font-medium text-foreground mb-1.5">Vezetéknév</label>
