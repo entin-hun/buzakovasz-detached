@@ -4,6 +4,11 @@ import { useAuth } from "@/contexts/AuthContext";
 import { useToast } from "@/hooks/use-toast";
 import { MapPin, Phone, CheckCircle2, Clock, Trash2, LayoutGrid, Map, TableProperties, Filter, CalendarDays } from "lucide-react";
 import { Link } from "react-router-dom";
+import { format } from "date-fns";
+import { hu } from "date-fns/locale";
+import { cn } from "@/lib/utils";
+import { Calendar } from "@/components/ui/calendar";
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import CommitModal from "./CommitModal";
 import StoreTableView from "./StoreTableView";
 
@@ -298,20 +303,34 @@ export default function StoreGrid() {
             Csak szabad
           </button>
 
-          <div className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl border border-border bg-card text-sm text-muted-foreground">
-            <CalendarDays size={13} />
-            <input
-              type="date"
-              value={filterDate}
-              onChange={(e) => { setFilterDate(e.target.value); setFilterAvailable(false); }}
-              className="bg-transparent outline-none text-foreground text-sm"
-              placeholder={nextFriday}
-              title="Szűrés dátumra"
-            />
-            {filterDate && (
-              <button onClick={() => setFilterDate("")} className="text-destructive ml-1 hover:opacity-70">✕</button>
-            )}
-          </div>
+          <Popover>
+            <PopoverTrigger asChild>
+              <button className={cn(
+                "flex items-center gap-1.5 px-3 py-2 rounded-xl border text-sm font-medium transition-all bg-card",
+                filterDate ? "border-primary text-primary bg-primary/10" : "border-border text-muted-foreground hover:border-primary/50"
+              )}>
+                <CalendarDays size={13} />
+                {filterDate ? format(new Date(filterDate + "T12:00:00"), "MMM d. (EEEE)", { locale: hu }) : "Péntek szűrő"}
+              </button>
+            </PopoverTrigger>
+            <PopoverContent className="w-auto p-0" align="start">
+              <Calendar
+                mode="single"
+                selected={filterDate ? new Date(filterDate + "T12:00:00") : undefined}
+                onSelect={(date) => {
+                  if (date) {
+                    setFilterDate(format(date, "yyyy-MM-dd"));
+                    setFilterAvailable(false);
+                  }
+                }}
+                disabled={(date) => date.getDay() !== 5 || date < new Date(new Date().toDateString())}
+                className={cn("p-3 pointer-events-auto")}
+              />
+            </PopoverContent>
+          </Popover>
+          {filterDate && (
+            <button onClick={() => setFilterDate("")} className="text-destructive text-xs hover:opacity-70">✕ Szűrő törlése</button>
+          )}
         </div>
 
         {(filterAvailable || filterDate) && (
