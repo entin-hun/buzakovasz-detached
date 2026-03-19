@@ -2,7 +2,7 @@ import { useState, useEffect } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
 import { useToast } from "@/hooks/use-toast";
-import { Camera } from "lucide-react";
+import { Camera, X } from "lucide-react";
 
 interface PendingEntry {
   id: string;
@@ -29,14 +29,14 @@ export default function RescueDataModal() {
 
   const fetchPending = async () => {
     if (!user) return;
-    // Get user's rescue_history entries with no kg and no photo
+    // Get user's rescue_history entries that are missing kg OR missing photo
     const { data } = await supabase
       .from("rescue_history")
       .select("id, het_datuma, store_id, megmentett_kg, image_url")
       .eq("user_id", user.id)
-      .is("megmentett_kg", null)
+      .or("megmentett_kg.is.null,image_url.is.null")
       .order("het_datuma", { ascending: false })
-      .limit(10);
+      .limit(20);
 
     if (!data || data.length === 0) {
       setChecked(true);
@@ -53,24 +53,33 @@ export default function RescueDataModal() {
     const storeMap: Record<string, string> = {};
     (stores ?? []).forEach((s) => { storeMap[s.id] = s.nev; });
 
-    setEntries(
-      data.map((d) => ({
-        id: d.id,
-        het_datuma: d.het_datuma,
-        store_name: storeMap[d.store_id]?.replace("Búzakovász – ", "") ?? "–",
-        megmentett_kg: d.megmentett_kg,
-        image_url: d.image_url,
-      }))
-    );
+    const mapped = data.map((d) => ({
+      id: d.id,
+      het_datuma: d.het_datuma,
+      store_name: storeMap[d.store_id]?.replace("Búzakovász – ", "") ?? "–",
+      megmentett_kg: d.megmentett_kg,
+      image_url: d.image_url,
+    }));
+
+    setEntries(mapped);
+    // Pre-fill existing kg values
+    const existing: Record<string, string> = {};
+    mapped.forEach((e) => {
+      if (e.megmentett_kg != null) existing[e.id] = String(e.megmentett_kg);
+    });
+    setKgValues(existing);
     setChecked(true);
   };
 
   const handleSaveAll = async () => {
     setLoading(true);
     for (const entry of entries) {
-      const kg = parseFloat(kgValues[entry.id] ?? "");
-      if (!isNaN(kg) && kg >= 0) {
-        await supabase.from("rescue_history").update({ megmentett_kg: kg }).eq("id", entry.id);
+      const raw = kgValues[entry.id];
+      if (raw !== undefined && raw !== "") {
+        const kg = parseFloat(raw);
+        if (!isNaN(kg) && kg >= 0) {
+          await supabase.from("rescue_history").update({ megmentett_kg: kg }).eq("id", entry.id);
+        }
       }
     }
     toast({ title: "Mentés sikeres! 📊", description: "Köszönjük az adatokat!" });
@@ -90,6 +99,8 @@ export default function RescueDataModal() {
         prev.map((e) => (e.id === entryId ? { ...e, image_url: urlData.publicUrl } : e))
       );
       toast({ title: "Fotó feltöltve! 📸" });
+    } else {
+      toast({ title: "Hiba a feltöltésnél", description: error.message, variant: "destructive" });
     }
     setUploading(null);
   };
@@ -103,13 +114,16 @@ export default function RescueDataModal() {
       onClick={() => setDismissed(true)}
     >
       <div
-        className="bg-card rounded-3xl border border-border p-6 w-full max-w-lg max-h-[85vh] overflow-y-auto"
+        className="bg-card rounded-3xl border border-border p-6 w-full max-w-lg max-h-[85vh] overflow-y-auto relative"
         style={{ boxShadow: "var(--shadow-card)" }}
         onClick={(e) => e.stopPropagation()}
       >
+        <button onClick={() => setDismissed(true)} className="absolute top-4 right-4 text-muted-foreground hover:text-foreground">
+          <X size={20} />
+        </button>
         <h3 className="text-xl font-bold text-foreground mb-1">📊 Korábbi mentések adatai</h3>
         <p className="text-sm text-muted-foreground mb-5">
-          Kérjük, add meg a megmentett mennyiséget és tölts fel fotót a korábbi mentéseiddel!
+          Kérjük, add meg a megmentett mennyiséget és tölts fel fotót a korábbi mentéseiddel! Ezek megjelennek a nyilvános mentéstörténetben.
         </p>
 
         <div className="space-y-4">
@@ -121,7 +135,7 @@ export default function RescueDataModal() {
                   <p className="text-xs text-muted-foreground">{entry.het_datuma}</p>
                 </div>
                 {entry.image_url && (
-                  <img src={entry.image_url} alt="Mentés fotó" className="w-10 h-10 rounded-lg object-cover border border-border" />
+                  <img src={entry.image_url} alt="Mentés fotó" className="w-12 h-12 rounded-lg object-cover border border-border" />
                 )}
               </div>
               <div className="flex items-center gap-3">
@@ -136,22 +150,20 @@ export default function RescueDataModal() {
                     className="w-full px-3 py-2 rounded-xl border border-border bg-background text-foreground text-sm focus:outline-none focus:ring-2 focus:ring-primary"
                   />
                 </div>
-                {!entry.image_url && (
-                  <label className="cursor-pointer flex items-center gap-1.5 px-3 py-2 rounded-xl border border-border text-xs text-muted-foreground hover:text-primary hover:border-primary/50 transition-all">
-                    <Camera size={14} />
-                    {uploading === entry.id ? "..." : "Fotó"}
-                    <input
-                      type="file"
-                      accept="image/*"
-                      className="hidden"
-                      disabled={uploading === entry.id}
-                      onChange={(e) => {
-                        const f = e.target.files?.[0];
-                        if (f) handlePhotoUpload(entry.id, f);
-                      }}
-                    />
-                  </label>
-                )}
+                <label className="cursor-pointer flex items-center gap-1.5 px-3 py-2 rounded-xl border border-border text-xs text-muted-foreground hover:text-primary hover:border-primary/50 transition-all">
+                  <Camera size={14} />
+                  {uploading === entry.id ? "..." : entry.image_url ? "Csere" : "Fotó"}
+                  <input
+                    type="file"
+                    accept="image/*"
+                    className="hidden"
+                    disabled={uploading === entry.id}
+                    onChange={(e) => {
+                      const f = e.target.files?.[0];
+                      if (f) handlePhotoUpload(entry.id, f);
+                    }}
+                  />
+                </label>
               </div>
             </div>
           ))}
