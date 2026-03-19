@@ -2,6 +2,7 @@ import { useState, useEffect } from "react";
 import NavBar from "@/components/NavBar";
 import StoreGrid from "@/components/StoreGrid";
 import ProfileCompletionModal from "@/components/ProfileCompletionModal";
+import RescueDataModal from "@/components/RescueDataModal";
 import { useAuth } from "@/contexts/AuthContext";
 import { Link } from "react-router-dom";
 import { Heart, Clock, ShieldCheck, Camera, ExternalLink } from "lucide-react";
@@ -92,6 +93,7 @@ const Index = () => {
     <div className="min-h-screen bg-background">
       <NavBar />
       <ProfileCompletionModal />
+      <RescueDataModal />
 
       {/* Hero */}
       <section className="relative h-72 md:h-96 overflow-hidden">
@@ -135,7 +137,7 @@ const Index = () => {
         <div className="mb-4">
           <h2 className="text-2xl font-bold text-foreground mb-1">Üzletek &amp; Önkéntesek</h2>
           <p className="text-muted-foreground text-sm mb-6">
-            Kattints egy kártyára a bevállaláshoz (bejelentkezés szükséges) · Állandó mentés minden péntekenre érvényes · <strong>18:00-kor</strong> kell odaérni · Max. 2 helyszín/önkéntes
+            Kattints egy kártyára a bevállaláshoz (bejelentkezés szükséges) · <strong>3 önkéntes</strong> jelentkezhet pékségenként · Állandó mentés minden péntekenre érvényes · <strong>18:00-kor</strong> kell odaérni
           </p>
           <StoreGrid />
         </div>

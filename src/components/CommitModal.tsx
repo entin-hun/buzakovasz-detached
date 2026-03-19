@@ -50,18 +50,17 @@ export default function CommitModal({ store, onClose, onSuccess }: CommitModalPr
     if (!user) return;
     setLoading(true);
 
-    // Check max 3 locations limit
-    const { data: existingCommitments } = await supabase
+    // Check max 3 volunteers per store
+    const { data: storeCommitments } = await supabase
       .from("rescue_commitments")
-      .select("id, store_id")
-      .eq("user_id", user.id)
+      .select("id, user_id")
+      .eq("store_id", store.id)
       .eq("aktiv", true);
 
-    const uniqueStores = new Set((existingCommitments ?? []).map(c => c.store_id));
-    if (!uniqueStores.has(store.id) && uniqueStores.size >= 2) {
+    if ((storeCommitments ?? []).length >= 3) {
       toast({
-        title: "Maximum 2 helyszín",
-        description: "Egy önkéntes legfeljebb 2 különböző (egymáshoz közeli) helyszínt vállalhat be. Előbb mondj le egy másikról!",
+        title: "Betelt a hely",
+        description: "Ehhez a pékséghez már 3 önkéntes jelentkezett. Válassz másikat!",
         variant: "destructive",
       });
       setLoading(false);
@@ -157,10 +156,10 @@ export default function CommitModal({ store, onClose, onSuccess }: CommitModalPr
             </div>
           )}
 
-          <div className="rounded-xl p-3 text-sm space-y-1.5" style={{ background: "hsl(var(--teal-light))", color: "hsl(var(--teal-dark))" }}>
+         <div className="rounded-xl p-3 text-sm space-y-1.5" style={{ background: "hsl(var(--teal-light))", color: "hsl(var(--teal-dark))" }}>
             <p>🕕 <strong>18:00-kor</strong> kell odaérni az üzlethez (bezáráskor).</p>
             <p>🤝 Kérjük, oszd szét minél szélesebb körben – <strong>lehetőleg rászorulókkal is</strong>.</p>
-            <p>📋 Max. <strong>2 helyszínt</strong> vállalhatsz be egyszerre (lehetőleg egymáshoz közelieket).</p>
+            <p>👥 Pékségenként <strong>max. 3 önkéntes</strong> jelentkezhet – könnyebb közösen menteni!</p>
             <p>🤝 Kérjük, egyeztesd az üzletben dolgozókkal, mikor érsz oda, és tartsd magad hozzá!</p>
           </div>
 
