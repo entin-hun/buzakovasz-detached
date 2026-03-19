@@ -36,11 +36,12 @@ export interface Commitment {
   profiles: { vezeteknev: string; keresztnev: string; telefonszam: string } | null;
 }
 
+const MAX_VOLUNTEERS_PER_STORE = 3;
+
 // ---- StoreCard ----
-function StoreCard({ store, commitments, myCommitment, onRefresh }: {
+function StoreCard({ store, commitments, onRefresh }: {
   store: Store;
   commitments: Commitment[];
-  myCommitment?: Commitment | null;
   onRefresh: () => void;
 }) {
   const { user } = useAuth();
@@ -48,7 +49,8 @@ function StoreCard({ store, commitments, myCommitment, onRefresh }: {
   const [showModal, setShowModal] = useState(false);
 
   const activeCommitments = commitments.filter((c) => c.aktiv);
-  const isCovered = activeCommitments.length > 0;
+  const slotsTaken = activeCommitments.length;
+  const isFull = slotsTaken >= MAX_VOLUNTEERS_PER_STORE;
 
   const handleCancel = async (commitmentId: string) => {
     const { error } = await supabase.from("rescue_commitments").delete().eq("id", commitmentId);
@@ -78,18 +80,33 @@ function StoreCard({ store, commitments, myCommitment, onRefresh }: {
               </a>
             )}
           </div>
-          <div className="ml-3">
-           {isCovered ? (
-              <span className="badge-taken">Foglalt</span>
+          <div className="ml-3 text-right">
+            {isFull ? (
+              <span className="badge-taken">Betelt</span>
+            ) : slotsTaken > 0 ? (
+              <span className="inline-flex items-center gap-1 bg-amber-100 text-amber-700 rounded-full px-3 py-1 text-xs font-semibold">{slotsTaken}/{MAX_VOLUNTEERS_PER_STORE}</span>
             ) : (
               <span className="badge-free">Szabad</span>
             )}
           </div>
         </div>
 
+        {/* Slots indicator */}
+        <div className="flex gap-1 mb-3">
+          {Array.from({ length: MAX_VOLUNTEERS_PER_STORE }).map((_, i) => (
+            <div
+              key={i}
+              className="h-1.5 flex-1 rounded-full transition-all"
+              style={{
+                background: i < slotsTaken ? "hsl(var(--teal))" : "hsl(var(--muted))",
+              }}
+            />
+          ))}
+        </div>
+
         <div className="space-y-2 mb-4 min-h-[3rem]">
           {activeCommitments.length === 0 ? (
-            <p className="text-xs text-muted-foreground italic">Még senki sem vállalta be.</p>
+            <p className="text-xs text-muted-foreground italic">Még senki sem vállalta be. (Max. {MAX_VOLUNTEERS_PER_STORE} fő jelentkezhet)</p>
           ) : (
             activeCommitments.map((c) => (
               <div
@@ -134,16 +151,13 @@ function StoreCard({ store, commitments, myCommitment, onRefresh }: {
         </div>
 
         {user ? (
-          myCommitment ? (
-            <div
-              className="rounded-xl p-3 text-sm text-center"
-              style={{ background: "hsl(var(--teal-light))", color: "hsl(var(--teal-dark))" }}
-            >
-              ✅ Bevállaltad ({myCommitment.tipus === "allandó" ? "állandó" : myCommitment.datum})
+          isFull ? (
+            <div className="rounded-xl p-3 text-sm text-center" style={{ background: "hsl(var(--muted))" }}>
+              ⛔ Betelt ({MAX_VOLUNTEERS_PER_STORE}/{MAX_VOLUNTEERS_PER_STORE} önkéntes)
             </div>
           ) : (
             <button onClick={() => setShowModal(true)} className="btn-teal w-full text-sm py-2.5">
-              Bevállalom! 🍞
+              Bevállalom! 🍞 ({slotsTaken}/{MAX_VOLUNTEERS_PER_STORE} hely foglalt)
             </button>
           )
         ) : (
