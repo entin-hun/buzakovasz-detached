@@ -93,6 +93,7 @@ const Index = () => {
     <div className="min-h-screen bg-background">
       <NavBar />
       <ProfileCompletionModal />
+      <RescueDataModal />
 
       {/* Hero */}
       <section className="relative h-72 md:h-96 overflow-hidden">
