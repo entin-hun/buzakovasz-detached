@@ -359,13 +359,11 @@ export default function StoreGrid() {
         <div className="grid sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
           {displayBakeries.map((store) => {
             const sc = commitments.filter((c) => c.store_id === store.id);
-            const myCommitment = user ? sc.find((c) => c.user_id === user.id) ?? null : null;
             return (
               <StoreCard
                 key={store.id}
                 store={store}
                 commitments={sc}
-                myCommitment={myCommitment}
                 onRefresh={fetchData}
               />
             );
