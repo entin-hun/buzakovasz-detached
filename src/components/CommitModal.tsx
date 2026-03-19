@@ -156,10 +156,10 @@ export default function CommitModal({ store, onClose, onSuccess }: CommitModalPr
             </div>
           )}
 
-          <div className="rounded-xl p-3 text-sm space-y-1.5" style={{ background: "hsl(var(--teal-light))", color: "hsl(var(--teal-dark))" }}>
+         <div className="rounded-xl p-3 text-sm space-y-1.5" style={{ background: "hsl(var(--teal-light))", color: "hsl(var(--teal-dark))" }}>
             <p>🕕 <strong>18:00-kor</strong> kell odaérni az üzlethez (bezáráskor).</p>
             <p>🤝 Kérjük, oszd szét minél szélesebb körben – <strong>lehetőleg rászorulókkal is</strong>.</p>
-            <p>📋 Max. <strong>2 helyszínt</strong> vállalhatsz be egyszerre (lehetőleg egymáshoz közelieket).</p>
+            <p>👥 Pékségenként <strong>max. 3 önkéntes</strong> jelentkezhet – könnyebb közösen menteni!</p>
             <p>🤝 Kérjük, egyeztesd az üzletben dolgozókkal, mikor érsz oda, és tartsd magad hozzá!</p>
           </div>
 
