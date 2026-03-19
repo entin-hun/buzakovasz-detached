@@ -2,6 +2,7 @@ import { useState, useEffect } from "react";
 import NavBar from "@/components/NavBar";
 import StoreGrid from "@/components/StoreGrid";
 import ProfileCompletionModal from "@/components/ProfileCompletionModal";
+import RescueDataModal from "@/components/RescueDataModal";
 import { useAuth } from "@/contexts/AuthContext";
 import { Link } from "react-router-dom";
 import { Heart, Clock, ShieldCheck, Camera, ExternalLink } from "lucide-react";
