@@ -16,14 +16,13 @@ const Index = () => {
   const [profilePanelOpen, setProfilePanelOpen] = useState(false);
   const hasAutoOpened = useRef(false);
 
-  // Auto-open profile panel on login if user has pending data
+  // Auto-open profile panel on login if user has a profile
   useEffect(() => {
     if (user && profile && !hasAutoOpened.current) {
       hasAutoOpened.current = true;
-      // Small delay to let ProfileCompletionModal take priority if needed
       const timer = setTimeout(() => {
         setProfilePanelOpen(true);
-      }, 800);
+      }, 600);
       return () => clearTimeout(timer);
     }
     if (!user) {
@@ -38,7 +37,6 @@ const Index = () => {
       <VolunteerProfilePanel
         open={profilePanelOpen}
         onClose={() => setProfilePanelOpen(false)}
-        promptMode={hasAutoOpened.current}
       />
 
       {/* Hero */}

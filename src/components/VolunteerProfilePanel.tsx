@@ -2,7 +2,7 @@ import { useState, useEffect } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
 import { useToast } from "@/hooks/use-toast";
-import { Camera, X, User, Calendar, Package, Phone, Mail } from "lucide-react";
+import { Camera, X, User, Calendar, Package, Phone, Check } from "lucide-react";
 
 interface HistoryEntry {
   id: string;
@@ -25,18 +25,17 @@ interface FutureCommitment {
 interface VolunteerProfilePanelProps {
   open: boolean;
   onClose: () => void;
-  /** If true, highlights the data-entry section */
-  promptMode?: boolean;
 }
 
-export default function VolunteerProfilePanel({ open, onClose, promptMode = false }: VolunteerProfilePanelProps) {
+export default function VolunteerProfilePanel({ open, onClose }: VolunteerProfilePanelProps) {
   const { user, profile } = useAuth();
   const { toast } = useToast();
   const [history, setHistory] = useState<HistoryEntry[]>([]);
   const [commitments, setCommitments] = useState<FutureCommitment[]>([]);
   const [kgValues, setKgValues] = useState<Record<string, string>>({});
+  const [editingKg, setEditingKg] = useState<string | null>(null);
   const [uploading, setUploading] = useState<string | null>(null);
-  const [saving, setSaving] = useState(false);
+  const [saving, setSaving] = useState<string | null>(null);
   const [selectedImage, setSelectedImage] = useState<string | null>(null);
 
   useEffect(() => {
@@ -73,7 +72,6 @@ export default function VolunteerProfilePanel({ open, onClose, promptMode = fals
     }));
     setHistory(hist);
 
-    // Pre-fill kg values
     const kgs: Record<string, string> = {};
     hist.forEach((h) => {
       if (h.megmentett_kg != null) kgs[h.id] = String(h.megmentett_kg);
@@ -87,26 +85,35 @@ export default function VolunteerProfilePanel({ open, onClose, promptMode = fals
     setCommitments(comms);
   };
 
-  const handleSaveAll = async () => {
-    setSaving(true);
-    for (const entry of history) {
-      const raw = kgValues[entry.id];
-      if (raw !== undefined && raw !== "") {
-        const kg = parseFloat(raw);
-        if (!isNaN(kg) && kg >= 0 && kg !== entry.megmentett_kg) {
-          await supabase.from("rescue_history").update({ megmentett_kg: kg }).eq("id", entry.id);
-        }
-      }
+  const handleSaveKg = async (entryId: string) => {
+    const raw = kgValues[entryId];
+    if (raw === undefined || raw === "") return;
+    const kg = parseFloat(raw);
+    if (isNaN(kg) || kg < 0) return;
+
+    setSaving(entryId);
+    const { error } = await supabase
+      .from("rescue_history")
+      .update({ megmentett_kg: kg })
+      .eq("id", entryId);
+
+    if (error) {
+      toast({ title: "Hiba", description: error.message, variant: "destructive" });
+    } else {
+      toast({ title: "Mentve! ✓" });
+      setHistory((prev) =>
+        prev.map((h) => (h.id === entryId ? { ...h, megmentett_kg: kg } : h))
+      );
     }
-    toast({ title: "Mentés sikeres! ✓" });
-    setSaving(false);
-    fetchData();
+    setSaving(null);
+    setEditingKg(null);
   };
 
   const handlePhotoUpload = async (entryId: string, file: File) => {
     if (!user) return;
     setUploading(entryId);
-    const path = `${user.id}/${entryId}-${Date.now()}.${file.name.split(".").pop()}`;
+    const ext = file.name.split(".").pop() || "jpg";
+    const path = `${user.id}/${entryId}-${Date.now()}.${ext}`;
     const { error } = await supabase.storage.from("rescue-photos").upload(path, file);
     if (error) {
       toast({ title: "Feltöltési hiba", description: error.message, variant: "destructive" });
@@ -114,16 +121,27 @@ export default function VolunteerProfilePanel({ open, onClose, promptMode = fals
       return;
     }
     const { data: urlData } = supabase.storage.from("rescue-photos").getPublicUrl(path);
-    await supabase.from("rescue_history").update({ image_url: urlData.publicUrl }).eq("id", entryId);
-    toast({ title: "Fotó feltöltve! 📸" });
+    const publicUrl = urlData.publicUrl;
+
+    const { error: updateError } = await supabase
+      .from("rescue_history")
+      .update({ image_url: publicUrl })
+      .eq("id", entryId);
+
+    if (updateError) {
+      toast({ title: "Hiba", description: updateError.message, variant: "destructive" });
+    } else {
+      toast({ title: "Fotó feltöltve! 📸" });
+      setHistory((prev) =>
+        prev.map((h) => (h.id === entryId ? { ...h, image_url: publicUrl } : h))
+      );
+    }
     setUploading(null);
-    fetchData();
   };
 
   if (!open || !user || !profile) return null;
 
-  const pendingEntries = history.filter((h) => !h.megmentett_kg || !h.image_url);
-  const displayEntries = promptMode && pendingEntries.length > 0 ? pendingEntries : history;
+  const pendingCount = history.filter((h) => !h.megmentett_kg || !h.image_url).length;
 
   return (
     <>
@@ -153,9 +171,9 @@ export default function VolunteerProfilePanel({ open, onClose, promptMode = fals
                 </p>
               </div>
             </div>
-            {promptMode && pendingEntries.length > 0 && (
+            {pendingCount > 0 && (
               <div className="mt-3 rounded-xl p-3 text-sm" style={{ background: "hsl(var(--teal-light))", color: "hsl(var(--teal-dark))" }}>
-                📊 Kérjük, add meg a korábbi mentéseid adatait (kg és fotó)!
+                📊 {pendingCount} mentésedhez hiányzik még adat (kg vagy fotó) – kérjük, töltsd ki!
               </div>
             )}
           </div>
@@ -176,7 +194,14 @@ export default function VolunteerProfilePanel({ open, onClose, promptMode = fals
                           {c.tipus === "allandó" ? "Állandó (minden péntek)" : `Egyszeri – ${c.datum}`}
                         </p>
                       </div>
-                      <span className={c.tipus === "allandó" ? "badge-permanent" : "inline-flex items-center gap-1 bg-blue-100 text-blue-700 rounded-full px-3 py-1 text-xs font-semibold"}>
+                      <span className={c.tipus === "allandó"
+                        ? "inline-flex items-center gap-1 rounded-full px-3 py-1 text-xs font-semibold"
+                        : "inline-flex items-center gap-1 rounded-full px-3 py-1 text-xs font-semibold"}
+                        style={c.tipus === "allandó"
+                          ? { background: "hsl(var(--teal-light))", color: "hsl(var(--teal-dark))" }
+                          : { background: "hsl(210 90% 92%)", color: "hsl(210 80% 40%)" }
+                        }
+                      >
                         {c.tipus === "allandó" ? "Állandó" : "Egyszeri"}
                       </span>
                     </div>
@@ -188,70 +213,122 @@ export default function VolunteerProfilePanel({ open, onClose, promptMode = fals
             {/* History / data entry */}
             <div>
               <h4 className="text-sm font-bold text-foreground mb-2 flex items-center gap-1.5">
-                <Package size={14} className="text-primary" /> Mentéstörténet – adatok feltöltése
+                <Package size={14} className="text-primary" /> Mentéstörténeted
               </h4>
-              {displayEntries.length === 0 ? (
+              {history.length === 0 ? (
                 <p className="text-sm text-muted-foreground">Még nincs mentéstörténeted.</p>
               ) : (
                 <div className="space-y-3">
-                  {displayEntries.map((entry) => (
-                    <div key={entry.id} className="rounded-xl border border-border p-4 space-y-3">
-                      <div className="flex items-center justify-between">
-                        <div>
-                          <p className="font-semibold text-foreground text-sm">{entry.store_name}</p>
-                          <p className="text-xs text-muted-foreground">{entry.het_datuma} · {entry.tipus === "allandó" ? "Állandó" : "Egyszeri"}</p>
+                  {history.map((entry) => {
+                    const hasPending = !entry.megmentett_kg || !entry.image_url;
+                    return (
+                      <div
+                        key={entry.id}
+                        className={`rounded-xl border p-4 space-y-3 ${hasPending ? "border-primary/40 bg-primary/5" : "border-border"}`}
+                      >
+                        <div className="flex items-center justify-between">
+                          <div>
+                            <p className="font-semibold text-foreground text-sm">{entry.store_name}</p>
+                            <p className="text-xs text-muted-foreground">
+                              {entry.het_datuma} · {entry.tipus === "allandó" ? "Állandó" : "Egyszeri"}
+                            </p>
+                          </div>
+                          {entry.image_url && (
+                            <button onClick={() => setSelectedImage(entry.image_url)}>
+                              <img
+                                src={entry.image_url}
+                                alt="Mentés"
+                                className="w-14 h-14 rounded-lg object-cover border border-border hover:opacity-80 transition-opacity cursor-pointer"
+                              />
+                            </button>
+                          )}
                         </div>
-                        {entry.image_url && (
-                          <button onClick={() => setSelectedImage(entry.image_url)}>
-                            <img src={entry.image_url} alt="Mentés" className="w-12 h-12 rounded-lg object-cover border border-border hover:opacity-80 transition-opacity cursor-pointer" />
-                          </button>
-                        )}
-                      </div>
-                      <div className="flex items-center gap-3">
-                        <div className="flex-1">
-                          <input
-                            type="number"
-                            step="0.1"
-                            min="0"
-                            placeholder="Megmentett kg"
-                            value={kgValues[entry.id] ?? ""}
-                            onChange={(e) => setKgValues({ ...kgValues, [entry.id]: e.target.value })}
-                            className="w-full px-3 py-2 rounded-xl border border-border bg-background text-foreground text-sm focus:outline-none focus:ring-2 focus:ring-primary"
-                          />
+
+                        {/* kg editing */}
+                        <div className="flex items-center gap-3">
+                          <div className="flex-1">
+                            {editingKg === entry.id ? (
+                              <div className="flex items-center gap-2">
+                                <input
+                                  type="number"
+                                  step="0.1"
+                                  min="0"
+                                  placeholder="Becsült kg"
+                                  value={kgValues[entry.id] ?? ""}
+                                  onChange={(e) => setKgValues({ ...kgValues, [entry.id]: e.target.value })}
+                                  className="flex-1 px-3 py-2 rounded-xl border border-border bg-background text-foreground text-sm focus:outline-none focus:ring-2 focus:ring-primary"
+                                  autoFocus
+                                />
+                                <button
+                                  onClick={() => handleSaveKg(entry.id)}
+                                  disabled={saving === entry.id}
+                                  className="px-3 py-2 rounded-xl text-sm font-semibold transition-colors"
+                                  style={{ background: "hsl(var(--teal))", color: "#fff" }}
+                                >
+                                  {saving === entry.id ? "..." : <Check size={16} />}
+                                </button>
+                                <button
+                                  onClick={() => setEditingKg(null)}
+                                  className="text-muted-foreground hover:text-foreground"
+                                >
+                                  <X size={16} />
+                                </button>
+                              </div>
+                            ) : (
+                              <button
+                                onClick={() => {
+                                  setEditingKg(entry.id);
+                                  if (entry.megmentett_kg != null) {
+                                    setKgValues({ ...kgValues, [entry.id]: String(entry.megmentett_kg) });
+                                  }
+                                }}
+                                className={`w-full text-left px-3 py-2 rounded-xl border text-sm transition-colors ${
+                                  entry.megmentett_kg
+                                    ? "border-border bg-muted/30 text-foreground hover:bg-muted/50"
+                                    : "border-dashed border-primary/40 text-muted-foreground hover:bg-primary/5"
+                                }`}
+                              >
+                                {entry.megmentett_kg ? `${entry.megmentett_kg} kg ✏️` : "📊 Kattints a kg megadásához"}
+                              </button>
+                            )}
+                          </div>
+
+                          {/* Photo upload */}
+                          <label className="cursor-pointer flex items-center gap-1.5 px-3 py-2 rounded-xl border text-xs font-medium transition-all shrink-0"
+                            style={!entry.image_url
+                              ? { borderColor: "hsl(var(--teal) / 0.4)", color: "hsl(var(--teal-dark))", background: "hsl(var(--teal-light))" }
+                              : { borderColor: "hsl(var(--border))", color: "hsl(var(--muted-foreground))" }
+                            }
+                          >
+                            <Camera size={14} />
+                            {uploading === entry.id ? "..." : entry.image_url ? "Csere" : "📷 Fotó"}
+                            <input
+                              type="file"
+                              accept="image/*"
+                              className="hidden"
+                              disabled={uploading === entry.id}
+                              onChange={(e) => {
+                                const f = e.target.files?.[0];
+                                if (f) handlePhotoUpload(entry.id, f);
+                              }}
+                            />
+                          </label>
                         </div>
-                        <label className="cursor-pointer flex items-center gap-1.5 px-3 py-2 rounded-xl border border-border text-xs text-muted-foreground hover:text-primary hover:border-primary/50 transition-all">
-                          <Camera size={14} />
-                          {uploading === entry.id ? "..." : entry.image_url ? "Csere" : "Fotó"}
-                          <input
-                            type="file"
-                            accept="image/*"
-                            className="hidden"
-                            disabled={uploading === entry.id}
-                            onChange={(e) => {
-                              const f = e.target.files?.[0];
-                              if (f) handlePhotoUpload(entry.id, f);
-                            }}
-                          />
-                        </label>
                       </div>
-                    </div>
-                  ))}
+                    );
+                  })}
                 </div>
               )}
             </div>
           </div>
 
-          {/* Footer actions */}
-          {displayEntries.length > 0 && (
-            <div className="sticky bottom-0 bg-card rounded-b-3xl border-t border-border px-6 py-4 flex gap-3">
-              <button onClick={onClose} className="btn-outline-teal flex-1 text-sm py-2.5">
-                {promptMode ? "Később" : "Bezárás"}
-              </button>
-              <button onClick={handleSaveAll} disabled={saving} className="btn-teal flex-1 text-sm py-2.5 disabled:opacity-60">
-                {saving ? "Mentés..." : "Mentés 📊"}
-              </button>
-            </div>
-          )}
+          {/* Footer */}
+          <div className="sticky bottom-0 bg-card rounded-b-3xl border-t border-border px-6 py-4">
+            <button onClick={onClose} className="w-full py-2.5 rounded-xl text-sm font-semibold transition-colors"
+              style={{ background: "hsl(var(--teal))", color: "#fff" }}>
+              Bezárás
+            </button>
+          </div>
         </div>
       </div>
 
