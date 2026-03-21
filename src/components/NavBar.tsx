@@ -3,7 +3,11 @@ import { useAuth } from "@/contexts/AuthContext";
 import { LogOut, User } from "lucide-react";
 import buzakovaszLogo from "@/assets/buzakovasz-logo.png";
 
-export default function NavBar() {
+interface NavBarProps {
+  onProfileOpen?: () => void;
+}
+
+export default function NavBar({ onProfileOpen }: NavBarProps) {
   const { user, profile, signOut } = useAuth();
   const navigate = useNavigate();
 
@@ -39,10 +43,13 @@ export default function NavBar() {
           <nav className="flex items-center gap-3">
             {user ? (
               <>
-                <div className="hidden sm:flex items-center gap-2 text-sm text-muted-foreground">
+                <button
+                  onClick={onProfileOpen}
+                  className="flex items-center gap-2 text-sm text-muted-foreground hover:text-primary transition-colors cursor-pointer"
+                >
                   <User size={16} className="text-primary" />
-                  <span>{profile ? `${profile.vezeteknev} ${profile.keresztnev}` : user.email}</span>
-                </div>
+                  <span className="hidden sm:inline">{profile ? `${profile.vezeteknev} ${profile.keresztnev}` : user.email}</span>
+                </button>
                 <button
                   onClick={handleSignOut}
                   className="btn-outline-teal flex items-center gap-2 text-sm px-4 py-2"

@@ -1,8 +1,8 @@
-import { useState } from "react";
+import { useState, useEffect, useRef } from "react";
 import NavBar from "@/components/NavBar";
 import StoreGrid from "@/components/StoreGrid";
 import ProfileCompletionModal from "@/components/ProfileCompletionModal";
-import RescueDataModal from "@/components/RescueDataModal";
+import VolunteerProfilePanel from "@/components/VolunteerProfilePanel";
 import RescueHistorySection from "@/components/RescueHistorySection";
 import { useAuth } from "@/contexts/AuthContext";
 import { Link } from "react-router-dom";
@@ -12,13 +12,34 @@ import buzakovaszLogo from "@/assets/buzakovasz-logo.png";
 import euSolidarityLogo from "@/assets/eu-solidarity-logo.png";
 
 const Index = () => {
-  const { user } = useAuth();
+  const { user, profile } = useAuth();
+  const [profilePanelOpen, setProfilePanelOpen] = useState(false);
+  const hasAutoOpened = useRef(false);
+
+  // Auto-open profile panel on login if user has pending data
+  useEffect(() => {
+    if (user && profile && !hasAutoOpened.current) {
+      hasAutoOpened.current = true;
+      // Small delay to let ProfileCompletionModal take priority if needed
+      const timer = setTimeout(() => {
+        setProfilePanelOpen(true);
+      }, 800);
+      return () => clearTimeout(timer);
+    }
+    if (!user) {
+      hasAutoOpened.current = false;
+    }
+  }, [user, profile]);
 
   return (
     <div className="min-h-screen bg-background">
-      <NavBar />
+      <NavBar onProfileOpen={() => setProfilePanelOpen(true)} />
       <ProfileCompletionModal />
-      <RescueDataModal />
+      <VolunteerProfilePanel
+        open={profilePanelOpen}
+        onClose={() => setProfilePanelOpen(false)}
+        promptMode={hasAutoOpened.current}
+      />
 
       {/* Hero */}
       <section className="relative h-72 md:h-96 overflow-hidden">
