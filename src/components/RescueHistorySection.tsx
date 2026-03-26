@@ -4,7 +4,7 @@ import { useAuth } from "@/contexts/AuthContext";
 import { useToast } from "@/hooks/use-toast";
 import { Camera, Pencil, X, Check, Lock } from "lucide-react";
 
-interface HistoryEntry {
+interface RawHistoryEntry {
   id: string;
   user_id: string;
   store_id: string;
@@ -13,8 +13,22 @@ interface HistoryEntry {
   megmentett_kg: number | null;
   image_url: string | null;
   created_at: string;
-  profiles?: { vezeteknev: string; keresztnev: string; telefonszam: string } | null;
-  stores?: { nev: string } | null;
+}
+
+interface GroupedEntry {
+  key: string;
+  het_datuma: string;
+  store_id: string;
+  store_name: string;
+  entries: {
+    id: string;
+    user_id: string;
+    tipus: string;
+    megmentett_kg: number | null;
+    image_url: string | null;
+    volunteer_name: string;
+    volunteer_phone: string;
+  }[];
 }
 
 const EDIT_PASSWORD = "mentesmodositas";
@@ -22,7 +36,7 @@ const EDIT_PASSWORD = "mentesmodositas";
 export default function RescueHistorySection() {
   const { user } = useAuth();
   const { toast } = useToast();
-  const [history, setHistory] = useState<HistoryEntry[]>([]);
+  const [grouped, setGrouped] = useState<GroupedEntry[]>([]);
   const [editingRow, setEditingRow] = useState<string | null>(null);
   const [editKg, setEditKg] = useState("");
   const [uploadingPhoto, setUploadingPhoto] = useState<string | null>(null);
@@ -30,6 +44,7 @@ export default function RescueHistorySection() {
   const [passwordPrompt, setPasswordPrompt] = useState<string | null>(null);
   const [passwordInput, setPasswordInput] = useState("");
   const [unlockedRows, setUnlockedRows] = useState<Set<string>>(new Set());
+  const [rawEntries, setRawEntries] = useState<RawHistoryEntry[]>([]);
 
   useEffect(() => {
     fetchHistory();
@@ -50,30 +65,57 @@ export default function RescueHistorySection() {
     const profileMap: Record<string, { vezeteknev: string; keresztnev: string; telefonszam: string }> = {};
     (profilesRes.data ?? []).forEach((p) => { profileMap[p.user_id] = p; });
 
-    const storeMap: Record<string, { nev: string }> = {};
-    (storesRes.data ?? []).forEach((s) => { storeMap[s.id] = s; });
+    const storeMap: Record<string, string> = {};
+    (storesRes.data ?? []).forEach((s) => { storeMap[s.id] = s.nev; });
 
-    const enriched = (historyRes.data ?? []).map((h: any) => ({
-      ...h,
-      profiles: profileMap[h.user_id] ?? null,
-      stores: storeMap[h.store_id] ?? null,
-    }));
+    const raw = historyRes.data ?? [];
+    setRawEntries(raw as RawHistoryEntry[]);
 
-    setHistory(enriched);
+    // Group by het_datuma + store_id
+    const groupMap = new Map<string, GroupedEntry>();
+    raw.forEach((h: any) => {
+      const key = `${h.het_datuma}-${h.store_id}`;
+      if (!groupMap.has(key)) {
+        groupMap.set(key, {
+          key,
+          het_datuma: h.het_datuma,
+          store_id: h.store_id,
+          store_name: storeMap[h.store_id]?.replace("Búzakovász – ", "") ?? "–",
+          entries: [],
+        });
+      }
+      const prof = profileMap[h.user_id];
+      groupMap.get(key)!.entries.push({
+        id: h.id,
+        user_id: h.user_id,
+        tipus: h.tipus,
+        megmentett_kg: h.megmentett_kg,
+        image_url: h.image_url,
+        volunteer_name: prof ? `${prof.vezeteknev} ${prof.keresztnev}` : "–",
+        volunteer_phone: prof?.telefonszam ?? "",
+      });
+    });
+
+    // Sort groups by date desc
+    const groups = Array.from(groupMap.values()).sort((a, b) =>
+      b.het_datuma.localeCompare(a.het_datuma)
+    );
+    setGrouped(groups);
   };
 
-  const canEdit = (entry: HistoryEntry) => {
-    if (user && entry.user_id === user.id) return true;
-    if (unlockedRows.has(entry.id)) return true;
+  const canEditEntry = (entryUserId: string, entryId: string) => {
+    if (user && entryUserId === user.id) return true;
+    if (unlockedRows.has(entryId)) return true;
     return false;
   };
 
-  const handleEditClick = (entry: HistoryEntry) => {
-    if (canEdit(entry)) {
-      setEditingRow(entry.id);
-      setEditKg(entry.megmentett_kg != null ? String(entry.megmentett_kg) : "");
+  const handleEditClick = (entryId: string, entryUserId: string) => {
+    if (canEditEntry(entryUserId, entryId)) {
+      setEditingRow(entryId);
+      const entry = rawEntries.find((e) => e.id === entryId);
+      setEditKg(entry?.megmentett_kg != null ? String(entry.megmentett_kg) : "");
     } else {
-      setPasswordPrompt(entry.id);
+      setPasswordPrompt(entryId);
       setPasswordInput("");
     }
   };
@@ -82,7 +124,7 @@ export default function RescueHistorySection() {
     if (passwordInput === EDIT_PASSWORD) {
       setUnlockedRows((prev) => new Set(prev).add(passwordPrompt!));
       setEditingRow(passwordPrompt);
-      const entry = history.find((h) => h.id === passwordPrompt);
+      const entry = rawEntries.find((e) => e.id === passwordPrompt);
       setEditKg(entry?.megmentett_kg != null ? String(entry.megmentett_kg) : "");
       setPasswordPrompt(null);
       setPasswordInput("");
@@ -91,20 +133,17 @@ export default function RescueHistorySection() {
     }
   };
 
-  const handleSaveKg = async (historyId: string) => {
+  const handleSaveKg = async (entryId: string) => {
     const kg = parseFloat(editKg);
     if (isNaN(kg) || kg < 0) return;
-    // Use service role via RPC or direct update (owner) or password-unlocked
-    const entry = history.find((h) => h.id === historyId);
+    const entry = rawEntries.find((e) => e.id === entryId);
     if (!entry) return;
 
     if (user && entry.user_id === user.id) {
-      await supabase.from("rescue_history").update({ megmentett_kg: kg }).eq("id", historyId);
-    } else if (unlockedRows.has(historyId)) {
-      // For password-unlocked edits, we need a different approach since RLS restricts updates
-      // We'll use an edge function for this
+      await supabase.from("rescue_history").update({ megmentett_kg: kg }).eq("id", entryId);
+    } else if (unlockedRows.has(entryId)) {
       const res = await supabase.functions.invoke("update-rescue-entry", {
-        body: { entryId: historyId, megmentett_kg: kg, password: EDIT_PASSWORD },
+        body: { entryId, megmentett_kg: kg, password: EDIT_PASSWORD },
       });
       if (res.error) {
         toast({ title: "Hiba", description: "Nem sikerült menteni", variant: "destructive" });
@@ -118,13 +157,13 @@ export default function RescueHistorySection() {
     fetchHistory();
   };
 
-  const handlePhotoUpload = async (historyId: string, file: File) => {
-    const entry = history.find((h) => h.id === historyId);
+  const handlePhotoUpload = async (entryId: string, file: File) => {
+    const entry = rawEntries.find((e) => e.id === entryId);
     if (!entry) return;
-    setUploadingPhoto(historyId);
+    setUploadingPhoto(entryId);
 
     const userId = user?.id ?? "anonymous";
-    const path = `${userId}/${historyId}-${Date.now()}.${file.name.split(".").pop()}`;
+    const path = `${userId}/${entryId}-${Date.now()}.${file.name.split(".").pop()}`;
     const { error: uploadError } = await supabase.storage.from("rescue-photos").upload(path, file);
     if (uploadError) {
       toast({ title: "Feltöltési hiba", description: uploadError.message, variant: "destructive" });
@@ -134,10 +173,10 @@ export default function RescueHistorySection() {
     const { data: urlData } = supabase.storage.from("rescue-photos").getPublicUrl(path);
 
     if (user && entry.user_id === user.id) {
-      await supabase.from("rescue_history").update({ image_url: urlData.publicUrl }).eq("id", historyId);
-    } else if (unlockedRows.has(historyId)) {
+      await supabase.from("rescue_history").update({ image_url: urlData.publicUrl }).eq("id", entryId);
+    } else if (unlockedRows.has(entryId)) {
       await supabase.functions.invoke("update-rescue-entry", {
-        body: { entryId: historyId, image_url: urlData.publicUrl, password: EDIT_PASSWORD },
+        body: { entryId, image_url: urlData.publicUrl, password: EDIT_PASSWORD },
       });
     }
     toast({ title: "Fotó feltöltve! 📸" });
@@ -145,7 +184,7 @@ export default function RescueHistorySection() {
     fetchHistory();
   };
 
-  const totalKg = history.reduce((sum, h) => sum + (h.megmentett_kg ?? 0), 0);
+  const totalKg = rawEntries.reduce((sum, h) => sum + (h.megmentett_kg ?? 0), 0);
 
   return (
     <section className="px-4 max-w-6xl mx-auto pb-10">
@@ -153,18 +192,17 @@ export default function RescueHistorySection() {
       <p className="text-muted-foreground text-sm mb-4">
         Korábbi heti mentések összesítése. Összesen megmentett pékáru: <strong className="text-foreground">{totalKg.toFixed(1)} kg</strong>
         {" · "}
-        <span className="text-xs">A <Pencil size={10} className="inline" /> ikonra kattintva szerkesztheted a saját mentéseidet.</span>
+        <span className="text-xs">A <Pencil size={10} className="inline" /> ikonra kattintva szerkesztheted a mentéseidet.</span>
       </p>
 
-      {history.length > 0 ? (
+      {grouped.length > 0 ? (
         <div className="overflow-x-auto rounded-2xl border border-border" style={{ boxShadow: "var(--shadow-card)" }}>
           <table className="w-full text-sm">
             <thead>
               <tr style={{ background: "hsl(var(--teal-light))", color: "hsl(var(--teal-dark))" }}>
                 <th className="text-left px-4 py-3 font-semibold">Hét</th>
                 <th className="text-left px-4 py-3 font-semibold">Üzlet</th>
-                <th className="text-left px-4 py-3 font-semibold">Önkéntes</th>
-                <th className="text-left px-4 py-3 font-semibold hidden sm:table-cell">Telefon</th>
+                <th className="text-left px-4 py-3 font-semibold">Önkéntes(ek)</th>
                 <th className="text-left px-4 py-3 font-semibold">Típus</th>
                 <th className="text-left px-4 py-3 font-semibold">kg</th>
                 <th className="text-left px-4 py-3 font-semibold">Fotó</th>
@@ -172,76 +210,82 @@ export default function RescueHistorySection() {
               </tr>
             </thead>
             <tbody className="bg-card divide-y divide-border">
-              {history.map((h) => (
-                <tr key={h.id} className="hover:bg-muted/50 transition-colors">
-                  <td className="px-4 py-3 font-medium">{h.het_datuma}</td>
-                  <td className="px-4 py-3">{h.stores?.nev?.replace("Búzakovász – ", "") ?? "–"}</td>
-                  <td className="px-4 py-3 font-medium">
-                    {h.profiles ? `${h.profiles.vezeteknev} ${h.profiles.keresztnev}` : "–"}
-                  </td>
-                  <td className="px-4 py-3 hidden sm:table-cell text-muted-foreground">
-                    {h.profiles?.telefonszam ? (
-                      <a href={`tel:${h.profiles.telefonszam}`} className="hover:text-primary transition-colors">{h.profiles.telefonszam}</a>
-                    ) : "–"}
-                  </td>
-                  <td className="px-4 py-3">
-                    {h.tipus === "allandó" ? (
-                      <span className="badge-taken">Állandó</span>
-                    ) : (
-                      <span className="inline-flex items-center gap-1 bg-blue-100 text-blue-700 rounded-full px-3 py-1 text-xs font-semibold">Egyszeri</span>
+              {grouped.map((group) => (
+                group.entries.map((entry, idx) => (
+                  <tr key={entry.id} className="hover:bg-muted/50 transition-colors">
+                    {idx === 0 && (
+                      <>
+                        <td className="px-4 py-3 font-medium" rowSpan={group.entries.length}>{group.het_datuma}</td>
+                        <td className="px-4 py-3" rowSpan={group.entries.length}>{group.store_name}</td>
+                      </>
                     )}
-                  </td>
-                  <td className="px-4 py-3">
-                    {editingRow === h.id ? (
-                      <div className="flex items-center gap-1">
-                        <input
-                          type="number"
-                          step="0.1"
-                          min="0"
-                          value={editKg}
-                          onChange={(e) => setEditKg(e.target.value)}
-                          className="w-16 px-2 py-1 rounded border border-border bg-background text-foreground text-sm"
-                          placeholder="kg"
-                          autoFocus
-                        />
-                        <button onClick={() => handleSaveKg(h.id)} className="text-primary hover:opacity-70">
-                          <Check size={14} />
+                    <td className="px-4 py-3">
+                      <span className="font-medium">{entry.volunteer_name}</span>
+                      {entry.volunteer_phone && (
+                        <a href={`tel:${entry.volunteer_phone}`} className="block text-xs text-muted-foreground hover:text-primary transition-colors">
+                          {entry.volunteer_phone}
+                        </a>
+                      )}
+                    </td>
+                    <td className="px-4 py-3">
+                      {entry.tipus === "allandó" ? (
+                        <span className="badge-taken">Állandó</span>
+                      ) : (
+                        <span className="inline-flex items-center gap-1 bg-blue-100 text-blue-700 rounded-full px-3 py-1 text-xs font-semibold">Egyszeri</span>
+                      )}
+                    </td>
+                    <td className="px-4 py-3">
+                      {editingRow === entry.id ? (
+                        <div className="flex items-center gap-1">
+                          <input
+                            type="number"
+                            step="0.1"
+                            min="0"
+                            value={editKg}
+                            onChange={(e) => setEditKg(e.target.value)}
+                            className="w-16 px-2 py-1 rounded border border-border bg-background text-foreground text-sm"
+                            placeholder="kg"
+                            autoFocus
+                          />
+                          <button onClick={() => handleSaveKg(entry.id)} className="text-primary hover:opacity-70">
+                            <Check size={14} />
+                          </button>
+                          <button onClick={() => setEditingRow(null)} className="text-muted-foreground hover:opacity-70">
+                            <X size={14} />
+                          </button>
+                        </div>
+                      ) : (
+                        <span className={entry.megmentett_kg ? "font-bold text-foreground" : "text-muted-foreground"}>
+                          {entry.megmentett_kg ? `${entry.megmentett_kg} kg` : "–"}
+                        </span>
+                      )}
+                    </td>
+                    <td className="px-4 py-3">
+                      {entry.image_url ? (
+                        <button onClick={() => setSelectedImage(entry.image_url)} className="flex-shrink-0">
+                          <img src={entry.image_url} alt="Mentés fotó" className="w-10 h-10 rounded-lg object-cover border border-border hover:opacity-80 transition-opacity cursor-pointer" />
                         </button>
-                        <button onClick={() => setEditingRow(null)} className="text-muted-foreground hover:opacity-70">
-                          <X size={14} />
-                        </button>
-                      </div>
-                    ) : (
-                      <span className={h.megmentett_kg ? "font-bold text-foreground" : "text-muted-foreground"}>
-                        {h.megmentett_kg ? `${h.megmentett_kg} kg` : "–"}
-                      </span>
-                    )}
-                  </td>
-                  <td className="px-4 py-3">
-                    {h.image_url ? (
-                      <button onClick={() => setSelectedImage(h.image_url)} className="flex-shrink-0">
-                        <img src={h.image_url} alt="Mentés fotó" className="w-10 h-10 rounded-lg object-cover border border-border hover:opacity-80 transition-opacity cursor-pointer" />
+                      ) : editingRow === entry.id || canEditEntry(entry.user_id, entry.id) ? (
+                        <label className="cursor-pointer flex items-center gap-1 text-xs text-muted-foreground hover:text-primary transition-colors">
+                          <Camera size={12} /> {uploadingPhoto === entry.id ? "..." : "Fotó"}
+                          <input type="file" accept="image/*" className="hidden" disabled={uploadingPhoto === entry.id}
+                            onChange={(e) => { const f = e.target.files?.[0]; if (f) handlePhotoUpload(entry.id, f); }} />
+                        </label>
+                      ) : (
+                        <span className="text-muted-foreground text-xs">–</span>
+                      )}
+                    </td>
+                    <td className="px-4 py-3">
+                      <button
+                        onClick={() => handleEditClick(entry.id, entry.user_id)}
+                        className="text-muted-foreground hover:text-primary transition-colors"
+                        title="Szerkesztés"
+                      >
+                        <Pencil size={14} />
                       </button>
-                    ) : editingRow === h.id || canEdit(h) ? (
-                      <label className="cursor-pointer flex items-center gap-1 text-xs text-muted-foreground hover:text-primary transition-colors">
-                        <Camera size={12} /> {uploadingPhoto === h.id ? "..." : "Fotó"}
-                        <input type="file" accept="image/*" className="hidden" disabled={uploadingPhoto === h.id}
-                          onChange={(e) => { const f = e.target.files?.[0]; if (f) handlePhotoUpload(h.id, f); }} />
-                      </label>
-                    ) : (
-                      <span className="text-muted-foreground text-xs">–</span>
-                    )}
-                  </td>
-                  <td className="px-4 py-3">
-                    <button
-                      onClick={() => handleEditClick(h)}
-                      className="text-muted-foreground hover:text-primary transition-colors"
-                      title="Szerkesztés"
-                    >
-                      <Pencil size={14} />
-                    </button>
-                  </td>
-                </tr>
+                    </td>
+                  </tr>
+                ))
               ))}
             </tbody>
           </table>

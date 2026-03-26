@@ -12,23 +12,30 @@ import buzakovaszLogo from "@/assets/buzakovasz-logo.png";
 import euSolidarityLogo from "@/assets/eu-solidarity-logo.png";
 
 const Index = () => {
-  const { user, profile } = useAuth();
+  const { user, profile, loading } = useAuth();
   const [profilePanelOpen, setProfilePanelOpen] = useState(false);
   const hasAutoOpened = useRef(false);
+  const prevUser = useRef<string | null>(null);
 
-  // Auto-open profile panel on login if user has a profile
+  // Auto-open profile panel on login (new session only)
   useEffect(() => {
+    if (loading) return;
     if (user && profile && !hasAutoOpened.current) {
-      hasAutoOpened.current = true;
-      const timer = setTimeout(() => {
-        setProfilePanelOpen(true);
-      }, 600);
-      return () => clearTimeout(timer);
+      // Only auto-open if this is a new login (user changed)
+      if (prevUser.current !== user.id) {
+        hasAutoOpened.current = true;
+        prevUser.current = user.id;
+        const timer = setTimeout(() => {
+          setProfilePanelOpen(true);
+        }, 600);
+        return () => clearTimeout(timer);
+      }
     }
     if (!user) {
       hasAutoOpened.current = false;
+      prevUser.current = null;
     }
-  }, [user, profile]);
+  }, [user, profile, loading]);
 
   return (
     <div className="min-h-screen bg-background">

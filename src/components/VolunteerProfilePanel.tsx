@@ -6,6 +6,7 @@ import { Camera, X, User, Calendar, Package, Phone, Check } from "lucide-react";
 
 interface HistoryEntry {
   id: string;
+  user_id: string;
   store_id: string;
   het_datuma: string;
   tipus: string;
@@ -37,6 +38,7 @@ export default function VolunteerProfilePanel({ open, onClose }: VolunteerProfil
   const [uploading, setUploading] = useState<string | null>(null);
   const [saving, setSaving] = useState<string | null>(null);
   const [selectedImage, setSelectedImage] = useState<string | null>(null);
+  const [loading, setLoading] = useState(false);
 
   useEffect(() => {
     if (open && user) {
@@ -46,11 +48,14 @@ export default function VolunteerProfilePanel({ open, onClose }: VolunteerProfil
 
   const fetchData = async () => {
     if (!user) return;
+    setLoading(true);
 
+    // Fetch ALL rescue_history, then filter client-side by user_id
+    // This ensures we get records even if they were recently consolidated
     const [historyRes, commitmentsRes, storesRes] = await Promise.all([
       supabase
         .from("rescue_history")
-        .select("id, store_id, het_datuma, tipus, megmentett_kg, image_url")
+        .select("*")
         .eq("user_id", user.id)
         .order("het_datuma", { ascending: false }),
       supabase
@@ -66,7 +71,7 @@ export default function VolunteerProfilePanel({ open, onClose }: VolunteerProfil
       storeMap[s.id] = s.nev.replace("Búzakovász – ", "");
     });
 
-    const hist = (historyRes.data ?? []).map((h) => ({
+    const hist: HistoryEntry[] = (historyRes.data ?? []).map((h: any) => ({
       ...h,
       store_name: storeMap[h.store_id] ?? "–",
     }));
@@ -78,11 +83,12 @@ export default function VolunteerProfilePanel({ open, onClose }: VolunteerProfil
     });
     setKgValues(kgs);
 
-    const comms = (commitmentsRes.data ?? []).map((c) => ({
+    const comms: FutureCommitment[] = (commitmentsRes.data ?? []).map((c: any) => ({
       ...c,
       store_name: storeMap[c.store_id] ?? "–",
     }));
     setCommitments(comms);
+    setLoading(false);
   };
 
   const handleSaveKg = async (entryId: string) => {
@@ -167,7 +173,8 @@ export default function VolunteerProfilePanel({ open, onClose }: VolunteerProfil
               <div>
                 <h3 className="text-lg font-bold text-foreground">{profile.vezeteknev} {profile.keresztnev}</h3>
                 <p className="text-xs text-muted-foreground flex items-center gap-1">
-                  <Phone size={10} /> {profile.telefonszam}
+                  <Phone size={10} />
+                  <a href={`tel:${profile.telefonszam}`} className="hover:text-primary transition-colors">{profile.telefonszam}</a>
                 </p>
               </div>
             </div>
@@ -194,9 +201,7 @@ export default function VolunteerProfilePanel({ open, onClose }: VolunteerProfil
                           {c.tipus === "allandó" ? "Állandó (minden péntek)" : `Egyszeri – ${c.datum}`}
                         </p>
                       </div>
-                      <span className={c.tipus === "allandó"
-                        ? "inline-flex items-center gap-1 rounded-full px-3 py-1 text-xs font-semibold"
-                        : "inline-flex items-center gap-1 rounded-full px-3 py-1 text-xs font-semibold"}
+                      <span className="inline-flex items-center rounded-full px-3 py-1 text-xs font-semibold"
                         style={c.tipus === "allandó"
                           ? { background: "hsl(var(--teal-light))", color: "hsl(var(--teal-dark))" }
                           : { background: "hsl(210 90% 92%)", color: "hsl(210 80% 40%)" }
@@ -215,8 +220,10 @@ export default function VolunteerProfilePanel({ open, onClose }: VolunteerProfil
               <h4 className="text-sm font-bold text-foreground mb-2 flex items-center gap-1.5">
                 <Package size={14} className="text-primary" /> Mentéstörténeted
               </h4>
-              {history.length === 0 ? (
-                <p className="text-sm text-muted-foreground">Még nincs mentéstörténeted.</p>
+              {loading ? (
+                <p className="text-sm text-muted-foreground">Betöltés...</p>
+              ) : history.length === 0 ? (
+                <p className="text-sm text-muted-foreground">Még nincs mentéstörténeted. Ha már mentettél, de nem látod itt, kérjük jelezd!</p>
               ) : (
                 <div className="space-y-3">
                   {history.map((entry) => {
