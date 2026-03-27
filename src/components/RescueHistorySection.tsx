@@ -33,7 +33,11 @@ interface GroupedEntry {
 
 const EDIT_PASSWORD = "mentesmodositas";
 
-export default function RescueHistorySection() {
+interface RescueHistorySectionProps {
+  onOpenProfile?: () => void;
+}
+
+export default function RescueHistorySection({ onOpenProfile }: RescueHistorySectionProps) {
   const { user } = useAuth();
   const { toast } = useToast();
   const [grouped, setGrouped] = useState<GroupedEntry[]>([]);
@@ -110,6 +114,11 @@ export default function RescueHistorySection() {
   };
 
   const handleEditClick = (entryId: string, entryUserId: string) => {
+    // If it's the user's own entry, open the profile panel popup
+    if (user && entryUserId === user.id && onOpenProfile) {
+      onOpenProfile();
+      return;
+    }
     if (canEditEntry(entryUserId, entryId)) {
       setEditingRow(entryId);
       const entry = rawEntries.find((e) => e.id === entryId);
