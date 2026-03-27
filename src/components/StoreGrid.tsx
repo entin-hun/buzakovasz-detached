@@ -70,6 +70,7 @@ function StoreCard({ store, commitments, onRefresh }: {
   const [showModal, setShowModal] = useState(false);
 
   const activeCommitments = relevantCommitments(commitments);
+  const slotsTaken = activeCommitments.length;
   const isFull = slotsTaken >= MAX_VOLUNTEERS_PER_STORE;
 
   const handleCancel = async (commitmentId: string) => {
@@ -255,8 +256,9 @@ export default function StoreGrid() {
   }
 
   const bakeries = stores.filter((s) => s.tipus === "pekseg");
+  const relevantCmts = relevantCommitments(commitments);
   const coveredCount = bakeries.filter((s) =>
-    commitments.some((c) => c.store_id === s.id && c.aktiv)
+    relevantCmts.some((c) => c.store_id === s.id)
   ).length;
 
   const nextFriday = (() => {
