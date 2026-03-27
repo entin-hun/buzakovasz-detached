@@ -114,6 +114,11 @@ export default function RescueHistorySection({ onOpenProfile }: RescueHistorySec
   };
 
   const handleEditClick = (entryId: string, entryUserId: string) => {
+    // If it's the user's own entry, open the profile panel popup
+    if (user && entryUserId === user.id && onOpenProfile) {
+      onOpenProfile();
+      return;
+    }
     if (canEditEntry(entryUserId, entryId)) {
       setEditingRow(entryId);
       const entry = rawEntries.find((e) => e.id === entryId);
