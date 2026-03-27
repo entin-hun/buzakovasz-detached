@@ -17,16 +17,30 @@ interface CommitModalProps {
   onSuccess: () => void;
 }
 
-// Generate upcoming Fridays
+// Generate upcoming Fridays (include today if it's Friday and before 18:00)
 function getUpcomingFridays(count: number): string[] {
   const fridays: string[] = [];
-  const d = new Date();
-  // Find next Friday
-  const day = d.getDay();
+  const now = new Date();
+  const day = now.getDay();
+
+  // If today is Friday and before 18:00 Budapest time, include today
+  if (day === 5) {
+    const budapestHour = new Date().toLocaleString("en-US", { timeZone: "Europe/Budapest", hour: "numeric", hour12: false });
+    const hour = parseInt(budapestHour, 10);
+    if (hour < 18) {
+      fridays.push(now.toISOString().split("T")[0]);
+    }
+  }
+
+  // Find next Friday after today
+  const d = new Date(now);
   const diff = (5 - day + 7) % 7 || 7;
   d.setDate(d.getDate() + diff);
-  for (let i = 0; i < count; i++) {
-    fridays.push(new Date(d).toISOString().split("T")[0]);
+  for (let i = 0; i < count && fridays.length < count; i++) {
+    const dateStr = new Date(d).toISOString().split("T")[0];
+    if (!fridays.includes(dateStr)) {
+      fridays.push(dateStr);
+    }
     d.setDate(d.getDate() + 7);
   }
   return fridays;
