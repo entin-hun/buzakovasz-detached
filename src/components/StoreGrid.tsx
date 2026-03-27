@@ -69,8 +69,7 @@ function StoreCard({ store, commitments, onRefresh }: {
   const { toast } = useToast();
   const [showModal, setShowModal] = useState(false);
 
-  const activeCommitments = commitments.filter((c) => c.aktiv);
-  const slotsTaken = activeCommitments.length;
+  const activeCommitments = relevantCommitments(commitments);
   const isFull = slotsTaken >= MAX_VOLUNTEERS_PER_STORE;
 
   const handleCancel = async (commitmentId: string) => {
