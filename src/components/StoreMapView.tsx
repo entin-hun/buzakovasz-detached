@@ -40,8 +40,8 @@ interface Props {
 }
 
 const markerColors: Record<string, string> = {
-  pekseg_free: "#6aaa9c",
-  pekseg_taken: "#f59e0b",
+  pekseg_free: "#f59e0b",
+  pekseg_taken: "#22c55e",
   kozossegi_huto: "#3b82f6",
   hajlektalan_szallo: "#8b5cf6",
 };
@@ -109,11 +109,11 @@ export default function StoreMapView({ stores, commitments, onRefresh, filterAva
       <div className="flex flex-wrap gap-3 mb-3 text-xs">
         <div className="flex items-center gap-1.5">
           <span className="w-3 h-3 rounded-full inline-block" style={{ background: markerColors.pekseg_free }}></span>
-          <span className="text-muted-foreground">Szabad pékség</span>
+         <span className="text-muted-foreground">Szabad pékség</span>
         </div>
         <div className="flex items-center gap-1.5">
           <span className="w-3 h-3 rounded-full inline-block" style={{ background: markerColors.pekseg_taken }}></span>
-          <span className="text-muted-foreground">Lefedett pékség</span>
+          <span className="text-muted-foreground">Lefedett pékség ✓</span>
         </div>
         <div className="flex items-center gap-1.5">
           <span className="w-3 h-3 rounded-full inline-block" style={{ background: markerColors.kozossegi_huto }}></span>
