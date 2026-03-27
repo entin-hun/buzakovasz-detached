@@ -38,6 +38,27 @@ export interface Commitment {
 
 const MAX_VOLUNTEERS_PER_STORE = 3;
 
+/** Return the current or next Friday as yyyy-MM-dd */
+function getCurrentFriday(): string {
+  const d = new Date();
+  const day = d.getDay();
+  // If today is Friday, use today; otherwise advance to next Friday
+  const diff = day === 5 ? 0 : ((5 - day + 7) % 7);
+  d.setDate(d.getDate() + diff);
+  return d.toISOString().split("T")[0];
+}
+
+/** Filter commitments to only currently relevant ones (állandó OR alkalmi with datum >= current friday) */
+function relevantCommitments(commitments: Commitment[]): Commitment[] {
+  const friday = getCurrentFriday();
+  return commitments.filter((c) => {
+    if (!c.aktiv) return false;
+    if (c.tipus === "allandó") return true;
+    // alkalmi: only if datum >= current friday
+    return c.datum != null && c.datum >= friday;
+  });
+}
+
 // ---- StoreCard ----
 function StoreCard({ store, commitments, onRefresh }: {
   store: Store;
@@ -48,7 +69,7 @@ function StoreCard({ store, commitments, onRefresh }: {
   const { toast } = useToast();
   const [showModal, setShowModal] = useState(false);
 
-  const activeCommitments = commitments.filter((c) => c.aktiv);
+  const activeCommitments = relevantCommitments(commitments);
   const slotsTaken = activeCommitments.length;
   const isFull = slotsTaken >= MAX_VOLUNTEERS_PER_STORE;
 
@@ -235,8 +256,9 @@ export default function StoreGrid() {
   }
 
   const bakeries = stores.filter((s) => s.tipus === "pekseg");
+  const relevantCmts = relevantCommitments(commitments);
   const coveredCount = bakeries.filter((s) =>
-    commitments.some((c) => c.store_id === s.id && c.aktiv)
+    relevantCmts.some((c) => c.store_id === s.id)
   ).length;
 
   const nextFriday = (() => {
