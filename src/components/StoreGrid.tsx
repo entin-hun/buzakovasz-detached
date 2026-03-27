@@ -38,6 +38,27 @@ export interface Commitment {
 
 const MAX_VOLUNTEERS_PER_STORE = 3;
 
+/** Return the current or next Friday as yyyy-MM-dd */
+function getCurrentFriday(): string {
+  const d = new Date();
+  const day = d.getDay();
+  // If today is Friday, use today; otherwise advance to next Friday
+  const diff = day === 5 ? 0 : ((5 - day + 7) % 7);
+  d.setDate(d.getDate() + diff);
+  return d.toISOString().split("T")[0];
+}
+
+/** Filter commitments to only currently relevant ones (állandó OR alkalmi with datum >= current friday) */
+function relevantCommitments(commitments: Commitment[]): Commitment[] {
+  const friday = getCurrentFriday();
+  return commitments.filter((c) => {
+    if (!c.aktiv) return false;
+    if (c.tipus === "allandó") return true;
+    // alkalmi: only if datum >= current friday
+    return c.datum != null && c.datum >= friday;
+  });
+}
+
 // ---- StoreCard ----
 function StoreCard({ store, commitments, onRefresh }: {
   store: Store;
