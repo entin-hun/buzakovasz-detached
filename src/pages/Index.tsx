@@ -95,7 +95,7 @@ const Index = () => {
       </section>
 
       {/* Rescue History */}
-      <RescueHistorySection />
+      <RescueHistorySection onOpenProfile={() => setProfilePanelOpen(true)} />
 
       {/* Footer */}
       <footer className="mt-12 border-t border-border bg-card">

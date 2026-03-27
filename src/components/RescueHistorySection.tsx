@@ -33,7 +33,11 @@ interface GroupedEntry {
 
 const EDIT_PASSWORD = "mentesmodositas";
 
-export default function RescueHistorySection() {
+interface RescueHistorySectionProps {
+  onOpenProfile?: () => void;
+}
+
+export default function RescueHistorySection({ onOpenProfile }: RescueHistorySectionProps) {
   const { user } = useAuth();
   const { toast } = useToast();
   const [grouped, setGrouped] = useState<GroupedEntry[]>([]);
