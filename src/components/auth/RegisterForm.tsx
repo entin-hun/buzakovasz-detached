@@ -2,6 +2,8 @@ import { useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
 import { useAuth } from "@/contexts/AuthContext";
+import { Link } from "react-router-dom";
+import { Button } from "@/components/ui/button";
 
 interface RegisterFormProps {
   onSwitchToLogin: () => void;
@@ -99,7 +101,7 @@ export default function RegisterForm({ onSwitchToLogin }: RegisterFormProps) {
       {showResendInfo && (
         <div className="rounded-xl p-4 text-sm space-y-2" style={{ background: "hsl(var(--teal-light))", color: "hsl(var(--teal-dark))" }}>
           <p className="font-semibold">📧 Már van fiókod ezzel az e-mail címmel!</p>
-          <p>Jelentkezz be az alábbi gombbal, és folytasd onnan ahol abbahagytad. Ha elfelejtetted a jelszavad, írj nekünk.</p>
+          <p>Jelentkezz be az alábbi gombbal, és folytasd onnan ahol abbahagytad. Ha elfelejtetted a jelszavad, kérj helyreállító linket.</p>
           <button
             type="button"
             onClick={onSwitchToLogin}
@@ -198,6 +200,7 @@ export default function RegisterForm({ onSwitchToLogin }: RegisterFormProps) {
           Jelentkezz be!
         </button>
       </p>
+      <Button asChild variant="link" className="w-full"><Link to="/forgot-password">Elfelejtetted a jelszavad?</Link></Button>
     </form>
   );
 }

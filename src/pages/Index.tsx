@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef } from "react";
+import { useState, useEffect } from "react";
 import NavBar from "@/components/NavBar";
 import StoreGrid from "@/components/StoreGrid";
 import ProfileCompletionModal from "@/components/ProfileCompletionModal";
@@ -12,30 +12,18 @@ import buzakovaszLogo from "@/assets/buzakovasz-logo.png";
 import euSolidarityLogo from "@/assets/eu-solidarity-logo.png";
 
 const Index = () => {
-  const { user, profile, loading } = useAuth();
+  const { user, profile, loading, loginNotice, dismissLoginNotice } = useAuth();
   const [profilePanelOpen, setProfilePanelOpen] = useState(false);
-  const hasAutoOpened = useRef(false);
-  const prevUser = useRef<string | null>(null);
+  const [photoReminder, setPhotoReminder] = useState(false);
 
   // Auto-open profile panel on login (new session only)
   useEffect(() => {
-    if (loading) return;
-    if (user && profile && !hasAutoOpened.current) {
-      // Only auto-open if this is a new login (user changed)
-      if (prevUser.current !== user.id) {
-        hasAutoOpened.current = true;
-        prevUser.current = user.id;
-        const timer = setTimeout(() => {
-          setProfilePanelOpen(true);
-        }, 600);
-        return () => clearTimeout(timer);
-      }
+    if (!loading && user && profile && loginNotice) {
+      setPhotoReminder(true);
+      setProfilePanelOpen(true);
+      dismissLoginNotice();
     }
-    if (!user) {
-      hasAutoOpened.current = false;
-      prevUser.current = null;
-    }
-  }, [user, profile, loading]);
+  }, [user, profile, loading, loginNotice, dismissLoginNotice]);
 
   return (
     <div className="min-h-screen bg-background">
@@ -43,7 +31,8 @@ const Index = () => {
       <ProfileCompletionModal />
       <VolunteerProfilePanel
         open={profilePanelOpen}
-        onClose={() => setProfilePanelOpen(false)}
+        photoReminder={photoReminder}
+        onClose={() => { setProfilePanelOpen(false); setPhotoReminder(false); }}
       />
 
       {/* Hero */}

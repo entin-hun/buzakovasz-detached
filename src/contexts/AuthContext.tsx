@@ -15,6 +15,8 @@ interface AuthContextType {
   session: Session | null;
   profile: Profile | null;
   loading: boolean;
+  loginNotice: boolean;
+  dismissLoginNotice: () => void;
   signOut: () => Promise<void>;
   refreshProfile: () => Promise<void>;
 }
@@ -24,6 +26,8 @@ const AuthContext = createContext<AuthContextType>({
   session: null,
   profile: null,
   loading: true,
+  loginNotice: false,
+  dismissLoginNotice: () => {},
   signOut: async () => {},
   refreshProfile: async () => {},
 });
@@ -35,6 +39,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
   const [session, setSession] = useState<Session | null>(null);
   const [profile, setProfile] = useState<Profile | null>(null);
   const [loading, setLoading] = useState(true);
+  const [loginNotice, setLoginNotice] = useState(false);
 
   const fetchProfile = async (userId: string) => {
     const { data } = await supabase
@@ -51,7 +56,18 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
 
   useEffect(() => {
     const { data: { subscription } } = supabase.auth.onAuthStateChange(
-      (_event, session) => {
+      (event, session) => {
+        if (event === "PASSWORD_RECOVERY") {
+          sessionStorage.setItem("volunteer-password-recovery", "true");
+          setLoginNotice(false);
+          if (window.location.pathname !== "/reset-password") window.location.replace(`${window.location.origin}/reset-password${window.location.search}${window.location.hash}`);
+        } else if (event === "SIGNED_IN" && window.location.pathname === "/auth") {
+          sessionStorage.removeItem("volunteer-password-recovery");
+          setLoginNotice(true);
+        } else if (event === "SIGNED_OUT") {
+          setLoginNotice(false);
+          sessionStorage.removeItem("volunteer-password-recovery");
+        }
         setSession(session);
         setUser(session?.user ?? null);
         if (session?.user) {
@@ -63,10 +79,9 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
       }
     );
 
-    supabase.auth.getSession().then(({ data: { session } }) => {
-      setSession(session);
-      setUser(session?.user ?? null);
-      if (session?.user) fetchProfile(session.user.id);
+    supabase.auth.getUser().then(({ data: { user } }) => {
+      setUser(user ?? null);
+      if (user) fetchProfile(user.id);
       setLoading(false);
     });
 
@@ -78,7 +93,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
   };
 
   return (
-    <AuthContext.Provider value={{ user, session, profile, loading, signOut, refreshProfile }}>
+    <AuthContext.Provider value={{ user, session, profile, loading, loginNotice, dismissLoginNotice: () => setLoginNotice(false), signOut, refreshProfile }}>
       {children}
     </AuthContext.Provider>
   );

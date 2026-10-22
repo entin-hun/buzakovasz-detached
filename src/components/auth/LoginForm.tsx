@@ -1,6 +1,8 @@
 import { useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
+import { Link } from "react-router-dom";
+import { Button } from "@/components/ui/button";
 
 interface LoginFormProps {
   onSwitchToRegister: () => void;
@@ -55,6 +57,7 @@ export default function LoginForm({ onSwitchToRegister }: LoginFormProps) {
       >
         {loading ? "Bejelentkezés..." : "Bejelentkezés"}
       </button>
+      <Button asChild variant="link" className="w-full"><Link to="/forgot-password">Elfelejtetted a jelszavad?</Link></Button>
       <p className="text-center text-sm text-muted-foreground pt-2">
         Még nincs fiókod?{" "}
         <button
