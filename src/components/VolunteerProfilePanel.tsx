@@ -2,7 +2,10 @@ import { useState, useEffect } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
 import { useToast } from "@/hooks/use-toast";
-import { Camera, X, User, Calendar, Package, Phone, Check } from "lucide-react";
+import { Camera, X, User, Calendar, Package, Phone, Check, Trash2 } from "lucide-react";
+import { Button } from "@/components/ui/button";
+import VolunteerAccountDetails from "@/components/VolunteerAccountDetails";
+import { cancelVolunteerCommitment } from "@/lib/volunteer-account";
 
 interface HistoryEntry {
   id: string;
@@ -26,9 +29,10 @@ interface FutureCommitment {
 interface VolunteerProfilePanelProps {
   open: boolean;
   onClose: () => void;
+  photoReminder?: boolean;
 }
 
-export default function VolunteerProfilePanel({ open, onClose }: VolunteerProfilePanelProps) {
+export default function VolunteerProfilePanel({ open, onClose, photoReminder = false }: VolunteerProfilePanelProps) {
   const { user, profile } = useAuth();
   const { toast } = useToast();
   const [history, setHistory] = useState<HistoryEntry[]>([]);
@@ -39,6 +43,21 @@ export default function VolunteerProfilePanel({ open, onClose }: VolunteerProfil
   const [saving, setSaving] = useState<string | null>(null);
   const [selectedImage, setSelectedImage] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
+  const [cancelling, setCancelling] = useState<string | null>(null);
+  const [confirmCancel, setConfirmCancel] = useState<string | null>(null);
+
+  const handleCancel = async (commitmentId: string) => {
+    if (!user) return;
+    setCancelling(commitmentId);
+    try {
+      await cancelVolunteerCommitment(user.id, commitmentId);
+      setCommitments(prev => prev.filter(c => c.id !== commitmentId));
+      setConfirmCancel(null);
+      toast({ title: "Vállalás lemondva", description: "A korábbi mentéseid megmaradtak a mentéstörténetben." });
+    } catch (err) {
+      toast({ title: "A lemondás nem sikerült", description: err instanceof Error ? err.message : "Próbáld újra.", variant: "destructive" });
+    } finally { setCancelling(null); }
+  };
 
   useEffect(() => {
     if (open && user) {
@@ -67,6 +86,11 @@ export default function VolunteerProfilePanel({ open, onClose }: VolunteerProfil
     ]);
 
     const storeMap: Record<string, string> = {};
+    if (historyRes.error || commitmentsRes.error || storesRes.error) {
+      toast({ title: "Az adatok betöltése nem sikerült", description: "Kérjük, zárd be és nyisd meg újra a profilodat.", variant: "destructive" });
+      setLoading(false);
+      return;
+    }
     (storesRes.data ?? []).forEach((s) => {
       storeMap[s.id] = s.nev.replace("Búzakovász – ", "");
     });
@@ -157,27 +181,29 @@ export default function VolunteerProfilePanel({ open, onClose }: VolunteerProfil
         onClick={onClose}
       >
         <div
-          className="bg-card rounded-3xl border border-border w-full max-w-lg max-h-[90vh] overflow-y-auto relative"
+          role="dialog" aria-modal="true" aria-label="Önkéntes profil"
+          className="bg-card rounded-lg border border-border w-full max-w-lg max-h-[90dvh] overflow-y-auto relative"
           style={{ boxShadow: "var(--shadow-card)" }}
           onClick={(e) => e.stopPropagation()}
         >
           {/* Header */}
           <div className="sticky top-0 bg-card rounded-t-3xl border-b border-border px-6 pt-5 pb-4 z-10">
-            <button onClick={onClose} className="absolute top-4 right-4 text-muted-foreground hover:text-foreground">
+            <Button variant="ghost" size="icon" aria-label="Profil bezárása" onClick={onClose} className="absolute top-2 right-2 text-muted-foreground hover:text-foreground">
               <X size={20} />
-            </button>
+            </Button>
             <div className="flex items-center gap-3 mb-1">
               <div className="w-10 h-10 rounded-full flex items-center justify-center" style={{ background: "hsl(var(--teal-light))", color: "hsl(var(--teal-dark))" }}>
                 <User size={20} />
               </div>
               <div>
-                <h3 className="text-lg font-bold text-foreground">{profile.vezeteknev} {profile.keresztnev}</h3>
+                <h3 className="text-lg font-bold text-foreground break-words pr-8">{profile.vezeteknev} {profile.keresztnev}</h3>
                 <p className="text-xs text-muted-foreground flex items-center gap-1">
                   <Phone size={10} />
                   <a href={`tel:${profile.telefonszam}`} className="hover:text-primary transition-colors">{profile.telefonszam}</a>
                 </p>
               </div>
             </div>
+            {photoReminder && <div role="status" className="mt-3 rounded-lg bg-primary/10 p-3 text-sm text-foreground"><p className="font-semibold flex items-center gap-2"><Camera size={18} />Köszönjük, hogy segítesz menteni!</p><p className="mt-1">Kérjük, tölts fel néhány képet a mentéseidről, akár a korábbi hetekről is, és add meg a becsült mennyiséget. Jó látni, mennyi pékáru jutott el együtt a rászorulókhoz. 💚</p></div>}
             {pendingCount > 0 && (
               <div className="mt-3 rounded-xl p-3 text-sm" style={{ background: "hsl(var(--teal-light))", color: "hsl(var(--teal-dark))" }}>
                 📊 {pendingCount} mentésedhez hiányzik még adat (kg vagy fotó) – kérjük, töltsd ki!
@@ -186,6 +212,7 @@ export default function VolunteerProfilePanel({ open, onClose }: VolunteerProfil
           </div>
 
           <div className="px-6 py-4 space-y-6">
+            <VolunteerAccountDetails />
             {/* Active commitments */}
             {commitments.length > 0 && (
               <div>
@@ -194,7 +221,8 @@ export default function VolunteerProfilePanel({ open, onClose }: VolunteerProfil
                 </h4>
                 <div className="space-y-2">
                   {commitments.map((c) => (
-                    <div key={c.id} className="rounded-xl border border-border px-4 py-3 flex items-center justify-between">
+                    <div key={c.id} className="rounded-lg border border-border px-4 py-3 space-y-3">
+                      <div className="flex items-start justify-between gap-2">
                       <div>
                         <p className="text-sm font-medium text-foreground">{c.store_name}</p>
                         <p className="text-xs text-muted-foreground">
@@ -209,6 +237,9 @@ export default function VolunteerProfilePanel({ open, onClose }: VolunteerProfil
                       >
                         {c.tipus === "allandó" ? "Állandó" : "Egyszeri"}
                       </span>
+                      <Button variant="ghost" size="icon" title="Vállalás lemondása" aria-label={`${c.store_name} vállalás lemondása`} onClick={() => setConfirmCancel(c.id)}><Trash2 className="text-destructive" /></Button>
+                      </div>
+                      {confirmCancel === c.id && <div className="border-t border-border pt-3 space-y-2"><p className="text-sm">Lemondod ezt {c.tipus === "allandó" ? "az állandó" : "az alkalmi"} vállalást? A korábbi mentéseid megmaradnak.</p><div className="flex flex-wrap gap-2"><Button size="sm" variant="destructive" disabled={cancelling === c.id} onClick={() => handleCancel(c.id)}>{cancelling === c.id ? "Lemondás…" : "Igen, lemondom"}</Button><Button size="sm" variant="outline" disabled={cancelling === c.id} onClick={() => setConfirmCancel(null)}>Mégse</Button></div></div>}
                     </div>
                   ))}
                 </div>
@@ -252,8 +283,8 @@ export default function VolunteerProfilePanel({ open, onClose }: VolunteerProfil
                         </div>
 
                         {/* kg editing */}
-                        <div className="flex items-center gap-3">
-                          <div className="flex-1">
+                        <div className="flex flex-col sm:flex-row gap-3">
+                          <div className="flex-1 min-w-0">
                             {editingKg === entry.id ? (
                               <div className="flex items-center gap-2">
                                 <input
@@ -263,7 +294,8 @@ export default function VolunteerProfilePanel({ open, onClose }: VolunteerProfil
                                   placeholder="Becsült kg"
                                   value={kgValues[entry.id] ?? ""}
                                   onChange={(e) => setKgValues({ ...kgValues, [entry.id]: e.target.value })}
-                                  className="flex-1 px-3 py-2 rounded-xl border border-border bg-background text-foreground text-sm focus:outline-none focus:ring-2 focus:ring-primary"
+                                  aria-label={`${entry.store_name} ${entry.het_datuma} becsült kg`}
+                                  className="flex-1 min-w-0 w-full px-3 py-2 rounded-lg border border-border bg-background text-foreground text-sm focus:outline-none focus:ring-2 focus:ring-primary"
                                   autoFocus
                                 />
                                 <button
