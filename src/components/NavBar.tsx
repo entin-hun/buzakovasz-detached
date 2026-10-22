@@ -2,6 +2,7 @@ import { Link, useNavigate } from "react-router-dom";
 import { useAuth } from "@/contexts/AuthContext";
 import { LogOut, User } from "lucide-react";
 import buzakovaszLogo from "@/assets/buzakovasz-logo.png";
+import { Button } from "@/components/ui/button";
 
 interface NavBarProps {
   onProfileOpen?: () => void;
@@ -43,20 +44,22 @@ export default function NavBar({ onProfileOpen }: NavBarProps) {
           <nav className="flex items-center gap-3">
             {user ? (
               <>
-                <button
-                  onClick={onProfileOpen}
+                <Button variant="ghost" size="sm"
+                  aria-label="Saját profil megnyitása" title="Saját profil megnyitása"
+                  onClick={() => { if (onProfileOpen) onProfileOpen(); else navigate("/"); }}
                   className="flex items-center gap-2 text-sm text-muted-foreground hover:text-primary transition-colors cursor-pointer"
                 >
                   <User size={16} className="text-primary" />
                   <span className="hidden sm:inline">{profile ? `${profile.vezeteknev} ${profile.keresztnev}` : user.email}</span>
-                </button>
-                <button
+                </Button>
+                <Button variant="outline"
+                  aria-label="Kijelentkezés" title="Kijelentkezés"
                   onClick={handleSignOut}
                   className="btn-outline-teal flex items-center gap-2 text-sm px-4 py-2"
                 >
                   <LogOut size={15} />
                   <span className="hidden sm:inline">Kilépés</span>
-                </button>
+                </Button>
               </>
             ) : (
               <Link to="/auth" className="btn-teal text-sm px-5 py-2">
