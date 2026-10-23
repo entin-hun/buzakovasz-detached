@@ -6,6 +6,7 @@ import { Camera, X, User, Calendar, Package, Phone, Check, Trash2 } from "lucide
 import { Button } from "@/components/ui/button";
 import VolunteerAccountDetails from "@/components/VolunteerAccountDetails";
 import { cancelVolunteerCommitment } from "@/lib/volunteer-account";
+import HolidayRescueNotice from "@/components/HolidayRescueNotice";
 
 interface HistoryEntry {
   id: string;
@@ -212,6 +213,7 @@ export default function VolunteerProfilePanel({ open, onClose, photoReminder = f
           </div>
 
           <div className="px-6 py-4 space-y-6">
+            <HolidayRescueNotice />
             <VolunteerAccountDetails />
             {/* Active commitments */}
             {commitments.length > 0 && (
@@ -226,7 +228,7 @@ export default function VolunteerProfilePanel({ open, onClose, photoReminder = f
                       <div>
                         <p className="text-sm font-medium text-foreground">{c.store_name}</p>
                         <p className="text-xs text-muted-foreground">
-                          {c.tipus === "allandó" ? "Állandó (minden péntek)" : `Egyszeri – ${c.datum}`}
+                          {c.tipus === "allandó" ? "Állandó (heti mentési nap)" : `Egyszeri – ${c.datum}`}
                         </p>
                       </div>
                       <span className="inline-flex items-center rounded-full px-3 py-1 text-xs font-semibold"

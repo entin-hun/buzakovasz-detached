@@ -6,6 +6,8 @@ import { useAuth } from "@/contexts/AuthContext";
 import { Link } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import CommitModal from "./CommitModal";
+import { forRescueDay, currentRescueDay } from "@/lib/rescue-calendar";
+import { Button } from "@/components/ui/button";
 
 const MAPBOX_TOKEN = "pk.eyJ1IjoiZHpzZ2VyZ2VseSIsImEiOiJjbWx4bnJrZm0wc201M2RxbmsycXNjNzk2In0.zqaV1zDO9zyjf8wUnIhJ6w";
 
@@ -69,7 +71,7 @@ export default function StoreMapView({ stores, commitments, onRefresh, filterAva
   }, [commitments]);
 
   const getStoreCommitments = (storeId: string) =>
-    commitments.filter((c) => c.store_id === storeId && c.aktiv);
+    forRescueDay(commitments.filter((c) => c.store_id === storeId), filterDate || currentRescueDay());
 
   const getStoreFutureCommitments = (storeId: string) =>
     futureCommitments.filter((c) => c.store_id === storeId && c.aktiv);
@@ -92,13 +94,13 @@ export default function StoreMapView({ stores, commitments, onRefresh, filterAva
     : validStores;
 
   const openNavigation = (store: Store) => {
-    const q = encodeURIComponent(`${store.nev}, ${store.cim}, Budapest`);
+    const q = store.lat != null && store.lng != null ? `${store.lat},${store.lng}` : encodeURIComponent(`${store.nev}, ${store.cim}`);
     window.open(`https://www.google.com/maps/dir/?api=1&destination=${q}`, "_blank");
   };
 
   const getColorKey = (store: Store) => {
     if (store.tipus === "kozossegi_huto") return "kozossegi_huto";
-    if (store.tipus === "hajlektalan_szallo") return "hajlektalan_szallo";
+    if (store.tipus !== "pekseg") return "hajlektalan_szallo";
     const isCovered = getStoreCommitments(store.id).length > 0;
     return isCovered ? "pekseg_taken" : "pekseg_free";
   };
@@ -191,13 +193,13 @@ export default function StoreMapView({ stores, commitments, onRefresh, filterAva
                   </a>
                 )}
 
-                <button
+                <Button
                   onClick={() => openNavigation(selectedStore)}
                   className="w-full text-xs font-semibold py-2 rounded-lg text-white mb-2 flex items-center justify-center gap-1.5"
                   style={{ background: "#4285f4" }}
                 >
                   <Navigation size={12} /> Navigálás ide
-                </button>
+                </Button>
 
                 {selectedStore.tipus === "pekseg" && (() => {
                   const sc = getStoreCommitments(selectedStore.id);
@@ -206,7 +208,7 @@ export default function StoreMapView({ stores, commitments, onRefresh, filterAva
 
                   const byDate: Record<string, Commitment[]> = {};
                   allFuture.forEach((c) => {
-                    const key = c.tipus === "allandó" ? "Állandó (minden péntek)" : (c.datum ?? "?");
+                    const key = c.tipus === "allandó" ? "Állandó (heti mentési nap)" : (c.datum ?? "?");
                     if (!byDate[key]) byDate[key] = [];
                     byDate[key].push(c);
                   });
@@ -251,13 +253,13 @@ export default function StoreMapView({ stores, commitments, onRefresh, filterAva
                             ✅ Bevállaltad ({myCommitment.tipus === "allandó" ? "állandó" : myCommitment.datum})
                           </div>
                         ) : (
-                          <button
+                          <Button
                             onClick={() => { setSelectedStore(null); setCommitStore(selectedStore); }}
                             className="w-full text-xs font-semibold py-2 rounded-lg text-white transition-colors"
                             style={{ background: "hsl(174 25% 56%)" }}
                           >
                             Bevállalom! 🍞
-                          </button>
+                          </Button>
                         )
                       ) : (
                         <Link
@@ -274,12 +276,12 @@ export default function StoreMapView({ stores, commitments, onRefresh, filterAva
 
                 {selectedStore.tipus === "kozossegi_huto" && (
                   <div className="text-xs text-blue-700 bg-blue-50 rounded-lg p-2 mt-1">
-                    📦 Ide leadható a megmaradt pékáru.
+                    📦 Átadás előtt egyeztess a fogadóhellyel.
                   </div>
                 )}
                 {selectedStore.tipus === "hajlektalan_szallo" && (
                   <div className="text-xs text-purple-700 bg-purple-50 rounded-lg p-2 mt-1">
-                    🤝 Hajléktalan szálló – ide is leadható a pékáru.
+                    🤝 Hajléktalan szálló – átadás előtt egyeztess velük.
                   </div>
                 )}
               </div>

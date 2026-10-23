@@ -10,6 +10,11 @@ import { cn } from "@/lib/utils";
 import { Calendar } from "@/components/ui/calendar";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import CommitModal from "./CommitModal";
+import { currentRescueDay, forRescueDay, isRescueDate } from "@/lib/rescue-calendar";
+import RecipientPlaceEditor from "./RecipientPlaceEditor";
+import { Button } from "@/components/ui/button";
+import { Plus, Pencil, Navigation } from "lucide-react";
+import { cancelVolunteerCommitment } from "@/lib/volunteer-account";
 import StoreTableView from "./StoreTableView";
 
 const StoreMapView = lazy(() => import("./StoreMapView"));
@@ -38,26 +43,7 @@ export interface Commitment {
 
 const MAX_VOLUNTEERS_PER_STORE = 3;
 
-/** Return the current or next Friday as yyyy-MM-dd */
-function getCurrentFriday(): string {
-  const d = new Date();
-  const day = d.getDay();
-  // If today is Friday, use today; otherwise advance to next Friday
-  const diff = day === 5 ? 0 : ((5 - day + 7) % 7);
-  d.setDate(d.getDate() + diff);
-  return d.toISOString().split("T")[0];
-}
-
-/** Filter commitments to only currently relevant ones (állandó OR alkalmi with datum >= current friday) */
-function relevantCommitments(commitments: Commitment[]): Commitment[] {
-  const friday = getCurrentFriday();
-  return commitments.filter((c) => {
-    if (!c.aktiv) return false;
-    if (c.tipus === "allandó") return true;
-    // alkalmi: only if datum >= current friday
-    return c.datum != null && c.datum >= friday;
-  });
-}
+const relevantCommitments = (items: Commitment[]) => forRescueDay(items);
 
 // ---- StoreCard ----
 function StoreCard({ store, commitments, onRefresh }: {
@@ -74,7 +60,9 @@ function StoreCard({ store, commitments, onRefresh }: {
   const isFull = slotsTaken >= MAX_VOLUNTEERS_PER_STORE;
 
   const handleCancel = async (commitmentId: string) => {
-    const { error } = await supabase.from("rescue_commitments").delete().eq("id", commitmentId);
+    if (!user) return;
+    let error: Error | null = null;
+    try { await cancelVolunteerCommitment(user.id, commitmentId); } catch(e) { error = e instanceof Error ? e : new Error("A lemondás nem sikerült."); }
     if (error) {
       toast({ title: "Hiba", description: error.message, variant: "destructive" });
     } else {
@@ -157,13 +145,13 @@ function StoreCard({ store, commitments, onRefresh }: {
                     <span className="text-xs text-muted-foreground">{c.datum}</span>
                   )}
                   {user && c.user_id === user.id && (
-                    <button
+                    <Button
                       onClick={() => handleCancel(c.id)}
                       className="text-destructive hover:opacity-70 transition-opacity ml-1"
                       title="Lemondás"
                     >
                       <Trash2 size={13} />
-                    </button>
+                    </Button>
                   )}
                 </div>
               </div>
@@ -177,9 +165,9 @@ function StoreCard({ store, commitments, onRefresh }: {
               ⛔ Betelt ({MAX_VOLUNTEERS_PER_STORE}/{MAX_VOLUNTEERS_PER_STORE} önkéntes)
             </div>
           ) : (
-            <button onClick={() => setShowModal(true)} className="btn-teal w-full text-sm py-2.5">
+            <Button onClick={() => setShowModal(true)} className="btn-teal w-full text-sm py-2.5">
               Bevállalom! 🍞 ({slotsTaken}/{MAX_VOLUNTEERS_PER_STORE} hely foglalt)
-            </button>
+            </Button>
           )
         ) : (
           <Link to="/auth" className="btn-outline-teal w-full text-sm py-2.5 text-center block">
@@ -210,6 +198,7 @@ export default function StoreGrid() {
   const [view, setView] = useState<ViewMode>("grid");
   const [filterAvailable, setFilterAvailable] = useState(false);
   const [filterDate, setFilterDate] = useState("");
+  const [recipientEditor, setRecipientEditor] = useState<Store | "new" | null>(null);
 
   const fetchData = async () => {
     const [storesRes, commitmentsRes, profilesRes] = await Promise.all([
@@ -237,8 +226,10 @@ export default function StoreGrid() {
     const channel = supabase
       .channel("rescue-changes")
       .on("postgres_changes", { event: "*", schema: "public", table: "rescue_commitments" }, fetchData)
+      .on("postgres_changes", { event: "*", schema: "public", table: "stores" }, fetchData)
       .subscribe();
-    return () => { supabase.removeChannel(channel); };
+    const timer = window.setInterval(fetchData, 60000);
+    return () => { supabase.removeChannel(channel); window.clearInterval(timer); };
   }, []);
 
   if (loading) {
@@ -261,16 +252,8 @@ export default function StoreGrid() {
     relevantCmts.some((c) => c.store_id === s.id)
   ).length;
 
-  const nextFriday = (() => {
-    const d = new Date();
-    const day = d.getDay();
-    const diff = (5 - day + 7) % 7 || 7;
-    d.setDate(d.getDate() + diff);
-    return d.toISOString().split("T")[0];
-  })();
-
   const filteredBakeries = bakeries.filter((store) => {
-    const sc = commitments.filter((c) => c.store_id === store.id && c.aktiv);
+    const sc = forRescueDay(commitments.filter((c) => c.store_id === store.id), filterDate || currentRescueDay());
     const isCovered = sc.length > 0;
     if (filterAvailable && isCovered) return false;
     if (filterDate) {
@@ -284,6 +267,7 @@ export default function StoreGrid() {
 
   return (
     <div>
+      <p className="text-sm font-semibold text-primary mb-4">Következő mentés: {currentRescueDay()} · 18:00</p>
       {/* Stats */}
       <div className="grid grid-cols-3 gap-3 mb-6">
         <div className="rounded-2xl p-4 text-center border border-border bg-card" style={{ boxShadow: "var(--shadow-card)" }}>
@@ -309,7 +293,7 @@ export default function StoreGrid() {
             { key: "table", label: "Táblázat", icon: <TableProperties size={15} /> },
             { key: "map", label: "Térkép", icon: <Map size={15} /> },
           ] as const).map((v) => (
-            <button
+            <Button
               key={v.key}
               onClick={() => setView(v.key)}
               className={`flex items-center gap-1.5 px-3 py-2 text-sm font-medium transition-colors ${
@@ -321,13 +305,13 @@ export default function StoreGrid() {
             >
               {v.icon}
               <span className="hidden sm:inline">{v.label}</span>
-            </button>
+            </Button>
           ))}
         </div>
 
         {/* Filters */}
         <div className="flex items-center gap-2 flex-wrap">
-          <button
+          <Button
             onClick={() => { setFilterAvailable(!filterAvailable); setFilterDate(""); }}
             className={`flex items-center gap-1.5 px-3 py-2 rounded-xl text-sm font-medium border transition-all ${
               filterAvailable
@@ -337,17 +321,17 @@ export default function StoreGrid() {
           >
             <Filter size={13} />
             Csak szabad
-          </button>
+          </Button>
 
           <Popover>
             <PopoverTrigger asChild>
-              <button className={cn(
+              <Button className={cn(
                 "flex items-center gap-1.5 px-3 py-2 rounded-xl border text-sm font-medium transition-all bg-card",
                 filterDate ? "border-primary text-primary bg-primary/10" : "border-border text-muted-foreground hover:border-primary/50"
               )}>
                 <CalendarDays size={13} />
-                {filterDate ? format(new Date(filterDate + "T12:00:00"), "MMM d. (EEEE)", { locale: hu }) : "Péntek szűrő"}
-              </button>
+                {filterDate ? format(new Date(filterDate + "T12:00:00"), "MMM d. (EEEE)", { locale: hu }) : "Mentési nap"}
+              </Button>
             </PopoverTrigger>
             <PopoverContent className="w-auto p-0" align="start">
               <Calendar
@@ -359,13 +343,13 @@ export default function StoreGrid() {
                     setFilterAvailable(false);
                   }
                 }}
-                disabled={(date) => date.getDay() !== 5 || date < new Date(new Date().toDateString())}
+                disabled={(date) => !isRescueDate(format(date, "yyyy-MM-dd")) || format(date, "yyyy-MM-dd") < currentRescueDay()}
                 className={cn("p-3 pointer-events-auto")}
               />
             </PopoverContent>
           </Popover>
           {filterDate && (
-            <button onClick={() => setFilterDate("")} className="text-destructive text-xs hover:opacity-70">✕ Szűrő törlése</button>
+            <Button onClick={() => setFilterDate("")} className="text-destructive text-xs hover:opacity-70">✕ Szűrő törlése</Button>
           )}
         </div>
 
@@ -380,7 +364,7 @@ export default function StoreGrid() {
       {view === "grid" && (
         <div className="grid sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
           {displayBakeries.map((store) => {
-            const sc = commitments.filter((c) => c.store_id === store.id);
+            const sc = forRescueDay(commitments.filter((c) => c.store_id === store.id), filterDate || currentRescueDay());
             return (
               <StoreCard
                 key={store.id}
@@ -424,6 +408,16 @@ export default function StoreGrid() {
         </Suspense>
       )}
 
+      <section className="mt-8 border-t border-border pt-6">
+        <div className="flex flex-wrap justify-between items-center gap-3 mb-4"><h3 className="font-bold text-foreground">Pékáru-befogadó helyek</h3>{user && <Button onClick={() => setRecipientEditor("new")}><Plus />Új befogadóhely</Button>}</div>
+        <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-3">{stores.filter(s => s.tipus !== "pekseg").map(place => <article key={place.id} className="border border-border rounded-lg p-4 bg-card space-y-2">
+          <div className="flex items-start justify-between gap-2"><h4 className="text-sm font-semibold break-words">{place.nev}</h4>{user && <Button size="icon" variant="ghost" aria-label={`${place.nev} szerkesztése`} title="Hely szerkesztése" onClick={() => setRecipientEditor(place)}><Pencil /></Button>}</div>
+          <p className="text-xs text-muted-foreground">{place.cim}</p>{place.telefon ? <a className="text-sm text-primary flex items-center gap-1" href={`tel:${place.telefon}`}><Phone size={14}/>{place.telefon}</a> : <p className="text-xs text-muted-foreground">Telefonszám még nem ellenőrzött</p>}
+          <Button asChild size="sm" variant="outline"><a target="_blank" rel="noopener noreferrer" href={`https://www.google.com/maps/dir/?api=1&destination=${place.lat != null && place.lng != null ? `${place.lat},${place.lng}` : encodeURIComponent(place.cim)}`}><Navigation/>Navigálás</a></Button>
+          <p className="text-xs text-muted-foreground">Átadás előtt egyeztess a fogadóhellyel.</p>
+        </article>)}</div>
+      </section>
+      {recipientEditor && <RecipientPlaceEditor place={recipientEditor === "new" ? null : recipientEditor} onClose={() => setRecipientEditor(null)} onSaved={fetchData} />}
       {/* Drop-off info box */}
       <div className="mt-8 rounded-2xl border border-border bg-card p-5" style={{ boxShadow: "var(--shadow-card)" }}>
         <h3 className="font-bold text-foreground mb-2 text-base">📦 Elosztási útmutató</h3>
@@ -443,7 +437,7 @@ export default function StoreGrid() {
             <span className="text-lg">🏠</span>
             <div>
               <p className="font-semibold text-foreground">Hajléktalan szállók</p>
-              <p className="text-xs text-muted-foreground">Lásd a térképen – elfogadják a pékárut</p>
+              <p className="text-xs text-muted-foreground">Lásd a térképen – átadás előtt egyeztess velük</p>
             </div>
           </div>
         </div>

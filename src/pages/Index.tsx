@@ -1,5 +1,6 @@
 import { useState, useEffect } from "react";
 import NavBar from "@/components/NavBar";
+import HolidayRescueNotice from "@/components/HolidayRescueNotice";
 import StoreGrid from "@/components/StoreGrid";
 import ProfileCompletionModal from "@/components/ProfileCompletionModal";
 import VolunteerProfilePanel from "@/components/VolunteerProfilePanel";
@@ -35,6 +36,7 @@ const Index = () => {
         onClose={() => { setProfilePanelOpen(false); setPhotoReminder(false); }}
       />
 
+      <HolidayRescueNotice />
       {/* Hero */}
       <section className="relative h-72 md:h-96 overflow-hidden">
         <img src={heroBread} alt="Búzakovász kenyerek" className="w-full h-full object-cover object-center" />
@@ -46,7 +48,7 @@ const Index = () => {
             Pékáru-mentés
           </h1>
           <p className="text-white/90 max-w-lg text-sm md:text-base" style={{ textShadow: "0 1px 6px rgba(0,0,0,0.4)" }}>
-            Minden <strong>pénteken 18:00-kor</strong> megmaradó kenyerek és péksütemények önkéntes megmentése a Búzakovász pékségekből.
+            Hetente, általában <strong>pénteken 18:00-kor</strong> megmaradó kenyerek és péksütemények önkéntes megmentése a Búzakovász pékségekből.
           </p>
           {!user && (
             <Link to="/auth" className="mt-5 inline-block btn-teal text-sm">
@@ -60,7 +62,7 @@ const Index = () => {
       <section className="py-10 px-4 max-w-6xl mx-auto">
         <div className="grid sm:grid-cols-3 gap-4 mb-12">
           {[
-            { icon: <Clock size={22} />, title: "Minden pénteken 18:00", text: "Az üzletek bezáráskor összegyűjtik a megmaradó pékárut. 18:00-kor kell odaérni." },
+            { icon: <Clock size={22} />, title: "Heti mentés 18:00-kor", text: "Ünnepi péntek esetén az előző munkanapon mentünk, ugyanúgy 18:00-kor." },
             { icon: <Heart size={22} />, title: "Önkéntes bevállalás", text: "Regisztrálj és vállalj be közeli üzleteket – akár rendszeresen! Max. 3 fő pékségenként." },
             { icon: <ShieldCheck size={22} />, title: "Átlátható rendszer", text: "Mindenki látja, melyik üzletből ki vállalja el a mentést." },
           ].map(item => (
@@ -77,7 +79,7 @@ const Index = () => {
         <div className="mb-4">
           <h2 className="text-2xl font-bold text-foreground mb-1">Üzletek &amp; Önkéntesek</h2>
           <p className="text-muted-foreground text-sm mb-6">
-            Kattints egy kártyára a bevállaláshoz (bejelentkezés szükséges) · <strong>3 önkéntes</strong> jelentkezhet pékségenként · Állandó mentés minden péntekenre érvényes · <strong>18:00-kor</strong> kell odaérni
+            Kattints egy kártyára a bevállaláshoz (bejelentkezés szükséges) · <strong>3 önkéntes</strong> jelentkezhet pékségenként · Állandó mentés minden heti mentési napra érvényes · <strong>18:00-kor</strong> kell odaérni
           </p>
           <StoreGrid />
         </div>

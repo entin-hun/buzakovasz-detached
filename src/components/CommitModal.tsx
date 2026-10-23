@@ -3,6 +3,8 @@ import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
 import { useToast } from "@/hooks/use-toast";
 import { MapPin, RotateCcw, Calendar } from "lucide-react";
+import { upcomingRescueDays, forRescueDay } from "@/lib/rescue-calendar";
+import { Button } from "@/components/ui/button";
 
 interface Store {
   id: string;
@@ -17,35 +19,6 @@ interface CommitModalProps {
   onSuccess: () => void;
 }
 
-// Generate upcoming Fridays (include today if it's Friday and before 18:00)
-function getUpcomingFridays(count: number): string[] {
-  const fridays: string[] = [];
-  const now = new Date();
-  const day = now.getDay();
-
-  // If today is Friday and before 18:00 Budapest time, include today
-  if (day === 5) {
-    const budapestHour = new Date().toLocaleString("en-US", { timeZone: "Europe/Budapest", hour: "numeric", hour12: false });
-    const hour = parseInt(budapestHour, 10);
-    if (hour < 18) {
-      fridays.push(now.toISOString().split("T")[0]);
-    }
-  }
-
-  // Find next Friday after today
-  const d = new Date(now);
-  const diff = (5 - day + 7) % 7 || 7;
-  d.setDate(d.getDate() + diff);
-  for (let i = 0; i < count && fridays.length < count; i++) {
-    const dateStr = new Date(d).toISOString().split("T")[0];
-    if (!fridays.includes(dateStr)) {
-      fridays.push(dateStr);
-    }
-    d.setDate(d.getDate() + 7);
-  }
-  return fridays;
-}
-
 export default function CommitModal({ store, onClose, onSuccess }: CommitModalProps) {
   const { user } = useAuth();
   const { toast } = useToast();
@@ -53,7 +26,7 @@ export default function CommitModal({ store, onClose, onSuccess }: CommitModalPr
   const [datum, setDatum] = useState("");
   const [loading, setLoading] = useState(false);
 
-  const fridays = getUpcomingFridays(8);
+  const fridays = upcomingRescueDays(8);
 
   useEffect(() => {
     setDatum(fridays[0]);
@@ -67,11 +40,11 @@ export default function CommitModal({ store, onClose, onSuccess }: CommitModalPr
     // Check max 3 volunteers per store
     const { data: storeCommitments } = await supabase
       .from("rescue_commitments")
-      .select("id, user_id")
+      .select("id, user_id, datum, tipus, aktiv")
       .eq("store_id", store.id)
       .eq("aktiv", true);
 
-    if ((storeCommitments ?? []).length >= 3) {
+    if (forRescueDay(storeCommitments ?? [], tipus === "egyszeri" ? datum : fridays[0]).length >= 3) {
       toast({
         title: "Betelt a hely",
         description: "Ehhez a pékséghez már 3 önkéntes jelentkezett. Válassz másikat!",
@@ -95,7 +68,7 @@ export default function CommitModal({ store, onClose, onSuccess }: CommitModalPr
     } else {
       toast({
         title: "Sikeresen bevállaltad! 🍞",
-        description: `${store.nev} – ${tipus === "állandó" ? "Állandó mentés (minden péntek)" : datum}`,
+        description: `${store.nev} – ${tipus === "állandó" ? "Állandó mentés (hetente, ünnepi kivételekkel)" : datum}`,
       });
       onSuccess();
       onClose();
@@ -124,7 +97,7 @@ export default function CommitModal({ store, onClose, onSuccess }: CommitModalPr
             <label className="block text-sm font-medium text-foreground mb-2">Mentés típusa</label>
             <div className="grid grid-cols-2 gap-3">
               {(["állandó", "egyszeri"] as const).map((t) => (
-                <button
+                <Button
                   key={t}
                   type="button"
                   onClick={() => setTipus(t)}
@@ -137,22 +110,22 @@ export default function CommitModal({ store, onClose, onSuccess }: CommitModalPr
                   {t === "állandó" ? <RotateCcw size={18} /> : <Calendar size={18} />}
                   {t === "állandó" ? "Állandó" : "Egyszeri"}
                   <span className="text-xs font-normal opacity-70">
-                    {t === "állandó" ? "Minden pénteken" : "Csak egyszer"}
+                    {t === "állandó" ? "Hetente, a mentési napon" : "Csak egyszer"}
                   </span>
-                </button>
+                </Button>
               ))}
             </div>
           </div>
 
           {tipus === "egyszeri" && (
             <div>
-              <label className="block text-sm font-medium text-foreground mb-1.5">Válassz pénteket</label>
+              <label className="block text-sm font-medium text-foreground mb-1.5">Válassz mentési napot</label>
               <div className="grid grid-cols-2 gap-2 max-h-48 overflow-y-auto">
                 {fridays.map((f) => {
                   const d = new Date(f);
-                  const label = d.toLocaleDateString("hu-HU", { month: "long", day: "numeric" });
+                  const label = d.toLocaleDateString("hu-HU", { month: "long", day: "numeric", weekday: "short" });
                   return (
-                    <button
+                    <Button
                       key={f}
                       type="button"
                       onClick={() => setDatum(f)}
@@ -163,7 +136,7 @@ export default function CommitModal({ store, onClose, onSuccess }: CommitModalPr
                       }`}
                     >
                       📅 {label}
-                    </button>
+                    </Button>
                   );
                 })}
               </div>
@@ -178,16 +151,16 @@ export default function CommitModal({ store, onClose, onSuccess }: CommitModalPr
           </div>
 
           <div className="flex gap-3 pt-2">
-            <button type="button" onClick={onClose} className="btn-outline-teal flex-1 text-sm py-2.5">
+            <Button type="button" onClick={onClose} className="btn-outline-teal flex-1 text-sm py-2.5">
               Mégse
-            </button>
-            <button
+            </Button>
+            <Button
               type="submit"
               disabled={loading}
               className="btn-teal flex-1 text-sm py-2.5 disabled:opacity-60"
             >
               {loading ? "Bevállalás..." : "Bevállalom! 🍞"}
-            </button>
+            </Button>
           </div>
         </form>
       </div>
