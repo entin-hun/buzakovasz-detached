@@ -1,4 +1,9 @@
 ## Feladatok
+- [ ] 2026–2027 hivatalos munkaszüneti napokhoz igazított mentési napok, foglalások és archiválás.
+- [ ] Előző heti belépéskori és e-mailes értesítés az érintett önkénteseknek.
+- [ ] Befogadóhelyek hozzáadása és szerkesztése működő térképes ponttal és navigációval.
+- [ ] Meglévő befogadóhelyek hivatalos elérhetőségeinek ellenőrzése és közeli helyek bővítése.
+- [ ] Új folyamatok és időzítési szabályok ellenőrzése.
 - [x] E-mailes jelszóhelyreállító és új jelszó megadó felület; engedélyezett e-mailes belépés, ellenőrzött visszatérési címek.
 - [x] Saját név és telefonszám szerkesztése; mentési szabályok tesztelve.
 - [x] Saját aktív vállalások lemondása az előzmények megőrzésével; szabályok tesztelve.
