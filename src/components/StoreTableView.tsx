@@ -5,6 +5,9 @@ import { useAuth } from "@/contexts/AuthContext";
 import { useToast } from "@/hooks/use-toast";
 import { Link } from "react-router-dom";
 import CommitModal from "./CommitModal";
+import { forRescueDay, currentRescueDay } from "@/lib/rescue-calendar";
+import { Button } from "@/components/ui/button";
+import { cancelVolunteerCommitment } from "@/lib/volunteer-account";
 
 interface Store {
   id: string;
@@ -41,7 +44,7 @@ export default function StoreTableView({ stores, commitments, onRefresh, filterA
   const bakeries = stores.filter((s) => s.tipus === "pekseg");
 
   const filteredStores = bakeries.filter((store) => {
-    const storeCommitments = commitments.filter((c) => c.store_id === store.id && c.aktiv);
+    const storeCommitments = forRescueDay(commitments.filter((c) => c.store_id === store.id), filterDate || currentRescueDay());
     const isCovered = storeCommitments.length > 0;
 
     if (filterAvailable && isCovered) return false;
@@ -59,7 +62,9 @@ export default function StoreTableView({ stores, commitments, onRefresh, filterA
   const displayStores = filterAvailable || filterDate ? filteredStores : bakeries;
 
   const handleCancel = async (commitmentId: string) => {
-    const { error } = await supabase.from("rescue_commitments").delete().eq("id", commitmentId);
+    if (!user) return;
+    let error: Error | null = null;
+    try { await cancelVolunteerCommitment(user.id, commitmentId); } catch(e) { error = e instanceof Error ? e : new Error("A lemondás nem sikerült."); }
     if (error) {
       toast({ title: "Hiba", description: error.message, variant: "destructive" });
     } else {
@@ -84,7 +89,7 @@ export default function StoreTableView({ stores, commitments, onRefresh, filterA
           </thead>
           <tbody className="bg-card divide-y divide-border">
             {displayStores.map((store) => {
-              const storeCommitments = commitments.filter((c) => c.store_id === store.id && c.aktiv);
+              const storeCommitments = forRescueDay(commitments.filter((c) => c.store_id === store.id), filterDate || currentRescueDay());
               const isCovered = storeCommitments.length > 0;
               const myCommitment = user ? storeCommitments.find((c) => c.user_id === user.id) : null;
 
@@ -143,13 +148,13 @@ export default function StoreTableView({ stores, commitments, onRefresh, filterA
                             )}
                             {c.datum && <span className="text-muted-foreground">({c.datum})</span>}
                             {user && c.user_id === user.id && (
-                              <button
+                              <Button
                                 onClick={() => handleCancel(c.id)}
                                 className="text-destructive hover:opacity-70 transition-opacity ml-1"
                                 title="Lemondás"
                               >
                                 <Trash2 size={11} />
-                              </button>
+                              </Button>
                             )}
                           </div>
                         ))
@@ -161,12 +166,12 @@ export default function StoreTableView({ stores, commitments, onRefresh, filterA
                       myCommitment ? (
                         <span className="text-xs text-primary font-medium">✅ Bevállaltad</span>
                       ) : (
-                        <button
+                        <Button
                           onClick={() => setCommitStore(store)}
                           className="btn-teal text-xs px-3 py-1.5 whitespace-nowrap"
                         >
                           Bevállalok
-                        </button>
+                        </Button>
                       )
                     ) : (
                       <Link to="/auth" className="btn-outline-teal text-xs px-3 py-1.5 whitespace-nowrap">

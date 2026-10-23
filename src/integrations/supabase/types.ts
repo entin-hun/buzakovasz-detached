@@ -170,7 +170,8 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
-      [_ in never]: never
+      archive_rescues: { Args: never; Returns: number }
+      rescue_day: { Args: { friday: string }; Returns: string }
     }
     Enums: {
       [_ in never]: never
