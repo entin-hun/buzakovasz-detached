@@ -1,12 +1,16 @@
 ## Feladatok
-- [ ] 2026–2027 hivatalos munkaszüneti napokhoz igazított mentési napok, foglalások és archiválás.
-- [ ] Előző heti belépéskori és e-mailes értesítés az érintett önkénteseknek.
-- [ ] Befogadóhelyek hozzáadása és szerkesztése működő térképes ponttal és navigációval.
-- [ ] Meglévő befogadóhelyek hivatalos elérhetőségeinek ellenőrzése és közeli helyek bővítése.
-- [ ] Új folyamatok és időzítési szabályok ellenőrzése.
+- [x] 2026-os rendelet és 2026–2027 törvényi ünnepnapok szerinti mentési napok, foglalások és budapesti 20:00-s archiválás; október 22-i előzmények létrehozva.
+- [x] Előző heti és mentésnapi ünnepi figyelmeztetés a főoldalon és a profilban.
+- [ ] E-mailes értesítés: nincs beállított saját küldődomain; az automatikus többcímzettes küldéshez megfelelő e-mail-szolgáltatás és külön beállítás szükséges.
+- [x] Befogadóhelyek hozzáadó/szerkesztő felülete, bejelentkezést ellenőrző címkereső tartalék szolgáltatással, címválasztás és navigáció; meglévő hely mentése belépve ellenőrizve.
+- [x] Hét meglévő hely hivatalos telefonszáma, három hibás cím/pont javítása, Miklós utcai Máltai adományközpont felvétele.
+- [ ] Sant’Egidio Gát utca, Átér és BMSZKI Szélső utca helyi telefonjának hivatalos igazolása: hiteles helyi elérhetőség nem található; számot nem találtam ki. Friss pékáru fogadását az új helyen telefonon kell egyeztetni.
+- [ ] 2027-es munkanap-áthelyezési rendelet kiegészítése: hivatalos kihirdetett forrás még nem ellenőrizhető; a törvényi ünnepek már szerepelnek.
+- [x] 19 teszt sikeres; nyilvános térképen 22 pont, mobilon nincs vízszintes túlcsordulás; belépve címkeresés és helyadatmentés visszaolvasva.
+- [ ] Új hely teljes hozzáadási próba és belépéskori ünnepi popup dátumhelyzetének ellenőrzése: további ellenőrzést igényel; a próbában nem hoztam létre duplikált valós helyet.
 - [x] E-mailes jelszóhelyreállító és új jelszó megadó felület; engedélyezett e-mailes belépés, ellenőrzött visszatérési címek.
 - [x] Saját név és telefonszám szerkesztése; mentési szabályok tesztelve.
 - [x] Saját aktív vállalások lemondása az előzmények megőrzésével; szabályok tesztelve.
 - [x] Belépéskori fotóemlékeztető; nyilvános oldalak telefonon és számítógépen ellenőrizve.
-- [ ] Valódi belépéssel profilmentés, lemondás és fotóemlékeztető ellenőrzése: az előnézetben nincs aktív felhasználói munkamenet, a saját fiókhoz munkamenet nem hozható létre.
+- [ ] Valódi belépéssel profilmentés, lemondás és fotóemlékeztető ellenőrzése: Dzsida Gergely fiókjával a belépés elérhető, ezek a korábbi ellenőrzések még nincsenek végig lefuttatva.
 - [ ] Valódi helyreállító e-mail kézbesítésének és a levélből történő jelszóváltásnak az ellenőrzése: felhasználói e-mailhez és linkhez nincs hozzáférés.
