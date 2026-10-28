@@ -1,6 +1,7 @@
 ## Feladatok
-- [ ] Más önkéntesek profilduplikációinak és leválasztott mentéseinek ellenőrzése; csak biztos egyezésnél összevonás, vállalások megőrzésével.
-- [ ] Nézetváltó ikonok kontrasztjának javítása és alapértelmezett térképnézet ellenőrzése.
+- [x] Profilaudit: 48 profil, nincs név-, ékezetfüggetlen név- vagy telefonszámduplikáció, nincs régi fiók nélküli profil; vállalások változatlanok.
+- [ ] Az október 16-i egyetlen profil nélküli mentés: a fiókhoz nincs név/telefon, biztos személyazonosság nélkül nem kapcsolható más önkénteshez; önkéntes adatai szükségesek. Két további, még be nem lépett fióknak szintén nincs profilja.
+- [x] Nézetváltó ikonok javítva: fehér az aktív színes gombon, sötét a világos inaktív gombokon; alapértelmezett térkép, 22 pont és minden nézetváltás telefonon/számítógépen ellenőrizve, nincs túlcsordulás vagy böngészőhiba; 19 teszt sikeres.
 - [x] 2026-os rendelet és 2026–2027 törvényi ünnepnapok szerinti mentési napok, foglalások és budapesti 20:00-s archiválás; október 22-i előzmények létrehozva.
 - [x] Előző heti és mentésnapi ünnepi figyelmeztetés a főoldalon és a profilban.
 - [ ] E-mailes értesítés: nincs beállított saját küldődomain; az automatikus többcímzettes küldéshez megfelelő e-mail-szolgáltatás és külön beállítás szükséges.
