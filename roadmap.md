@@ -1,4 +1,6 @@
 ## Feladatok
+- [ ] Más önkéntesek profilduplikációinak és leválasztott mentéseinek ellenőrzése; csak biztos egyezésnél összevonás, vállalások megőrzésével.
+- [ ] Nézetváltó ikonok kontrasztjának javítása és alapértelmezett térképnézet ellenőrzése.
 - [x] 2026-os rendelet és 2026–2027 törvényi ünnepnapok szerinti mentési napok, foglalások és budapesti 20:00-s archiválás; október 22-i előzmények létrehozva.
 - [x] Előző heti és mentésnapi ünnepi figyelmeztetés a főoldalon és a profilban.
 - [ ] E-mailes értesítés: nincs beállított saját küldődomain; az automatikus többcímzettes küldéshez megfelelő e-mail-szolgáltatás és külön beállítás szükséges.

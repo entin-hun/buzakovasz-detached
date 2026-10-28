@@ -13,6 +13,7 @@ import CommitModal from "./CommitModal";
 import { currentRescueDay, forRescueDay, isRescueDate } from "@/lib/rescue-calendar";
 import RecipientPlaceEditor from "./RecipientPlaceEditor";
 import { Button } from "@/components/ui/button";
+import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
 import { Plus, Pencil, Navigation } from "lucide-react";
 import { cancelVolunteerCommitment } from "@/lib/volunteer-account";
 import StoreTableView from "./StoreTableView";
@@ -195,7 +196,7 @@ export default function StoreGrid() {
   const [stores, setStores] = useState<Store[]>([]);
   const [commitments, setCommitments] = useState<Commitment[]>([]);
   const [loading, setLoading] = useState(true);
-  const [view, setView] = useState<ViewMode>("grid");
+  const [view, setView] = useState<ViewMode>("map");
   const [filterAvailable, setFilterAvailable] = useState(false);
   const [filterDate, setFilterDate] = useState("");
   const [recipientEditor, setRecipientEditor] = useState<Store | "new" | null>(null);
@@ -287,25 +288,32 @@ export default function StoreGrid() {
       {/* Toolbar: view toggle + filters */}
       <div className="flex flex-wrap items-center gap-3 mb-5">
         {/* View Toggle */}
-        <div className="flex rounded-xl border border-border overflow-hidden bg-card" style={{ boxShadow: "var(--shadow-card)" }}>
+        <div className="flex gap-1 rounded-lg border border-border p-1 bg-card" style={{ boxShadow: "var(--shadow-card)" }} role="group" aria-label="Üzletek nézete">
           {([
             { key: "grid", label: "Kártyák", icon: <LayoutGrid size={15} /> },
             { key: "table", label: "Táblázat", icon: <TableProperties size={15} /> },
             { key: "map", label: "Térkép", icon: <Map size={15} /> },
           ] as const).map((v) => (
-            <Button
-              key={v.key}
-              onClick={() => setView(v.key)}
-              className={`flex items-center gap-1.5 px-3 py-2 text-sm font-medium transition-colors ${
-                view === v.key
-                  ? "text-primary-foreground"
-                  : "text-muted-foreground hover:text-foreground"
-              }`}
-              style={view === v.key ? { background: "hsl(var(--teal))" } : {}}
-            >
-              {v.icon}
-              <span className="hidden sm:inline">{v.label}</span>
-            </Button>
+            <Tooltip key={v.key}>
+              <TooltipTrigger asChild>
+                <Button
+                  variant={view === v.key ? "default" : "ghost"}
+                  onClick={() => setView(v.key)}
+                  aria-label={v.label}
+                  aria-pressed={view === v.key}
+                  className={cn(
+                    "gap-2 min-w-11 h-11 px-3 rounded-md [&_svg]:size-5",
+                    view === v.key
+                      ? "bg-primary text-primary-foreground"
+                      : "bg-card text-foreground hover:bg-secondary hover:text-secondary-foreground"
+                  )}
+                >
+                  {v.icon}
+                  <span className="hidden sm:inline">{v.label}</span>
+                </Button>
+              </TooltipTrigger>
+              <TooltipContent>{v.label}</TooltipContent>
+            </Tooltip>
           ))}
         </div>
 
