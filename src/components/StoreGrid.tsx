@@ -17,6 +17,7 @@ import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip
 import { Plus, Pencil, Navigation } from "lucide-react";
 import { cancelVolunteerCommitment } from "@/lib/volunteer-account";
 import StoreTableView from "./StoreTableView";
+import { requireQueryData } from "@/lib/query-data";
 
 const StoreMapView = lazy(() => import("./StoreMapView"));
 
@@ -196,30 +197,42 @@ export default function StoreGrid() {
   const [stores, setStores] = useState<Store[]>([]);
   const [commitments, setCommitments] = useState<Commitment[]>([]);
   const [loading, setLoading] = useState(true);
+  const [loadError, setLoadError] = useState(false);
+  const [hasLoaded, setHasLoaded] = useState(false);
   const [view, setView] = useState<ViewMode>("map");
   const [filterAvailable, setFilterAvailable] = useState(false);
   const [filterDate, setFilterDate] = useState("");
   const [recipientEditor, setRecipientEditor] = useState<Store | "new" | null>(null);
 
   const fetchData = async () => {
+    setLoading(true);
+    try {
     const [storesRes, commitmentsRes, profilesRes] = await Promise.all([
       supabase.from("stores").select("*").order("tipus").order("nev"),
       supabase.from("rescue_commitments").select("*").eq("aktiv", true).order("created_at"),
       supabase.from("profiles").select("user_id, vezeteknev, keresztnev, telefonszam"),
     ]);
 
-    const profileMap: Record<string, { vezeteknev: string; keresztnev: string; telefonszam: string }> = {};
-    (profilesRes.data ?? []).forEach((p) => { profileMap[p.user_id] = p; });
+    const nextStores = requireQueryData(storesRes);
+    const nextCommitments = requireQueryData(commitmentsRes);
+    const nextProfiles = requireQueryData(profilesRes);
 
-    if (storesRes.data) setStores(storesRes.data as Store[]);
-    if (commitmentsRes.data) {
-      const enriched: Commitment[] = commitmentsRes.data.map((c) => ({
+    const profileMap: Record<string, { vezeteknev: string; keresztnev: string; telefonszam: string }> = {};
+    nextProfiles.forEach((p) => { profileMap[p.user_id] = p; });
+
+    setStores(nextStores as Store[]);
+      const enriched: Commitment[] = nextCommitments.map((c) => ({
         ...c,
         profiles: profileMap[c.user_id] ?? null,
       }));
       setCommitments(enriched);
+      setHasLoaded(true);
+      setLoadError(false);
+    } catch {
+      setLoadError(true);
+    } finally {
+      setLoading(false);
     }
-    setLoading(false);
   };
 
   useEffect(() => {
@@ -233,7 +246,7 @@ export default function StoreGrid() {
     return () => { supabase.removeChannel(channel); window.clearInterval(timer); };
   }, []);
 
-  if (loading) {
+  if (loading && !hasLoaded) {
     return (
       <div className="grid sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
         {[...Array(8)].map((_, i) => (
@@ -246,6 +259,16 @@ export default function StoreGrid() {
       </div>
     );
   }
+
+  const errorNotice = loadError && (
+    <div role="alert" className="border border-destructive/40 rounded-lg p-4 mb-5 space-y-3">
+      <p className="text-foreground">A helyszínek és vállalások betöltése nem sikerült. Kérjük, próbáld újra később.</p>
+      {hasLoaded && <p className="text-sm text-muted-foreground">A legutóbb betöltött adatok láthatók; azóta változhattak.</p>}
+      <Button variant="outline" onClick={fetchData} disabled={loading}>Újrapróbálás</Button>
+    </div>
+  );
+  if (!hasLoaded) return errorNotice;
+  if (stores.length === 0) return <div className="py-6 text-muted-foreground">Még nincs helyszín.</div>;
 
   const bakeries = stores.filter((s) => s.tipus === "pekseg");
   const relevantCmts = relevantCommitments(commitments);
@@ -268,6 +291,7 @@ export default function StoreGrid() {
 
   return (
     <div>
+      {errorNotice}
       <p className="text-sm font-semibold text-primary mb-4">Következő mentés: {currentRescueDay()} · 18:00</p>
       {/* Stats */}
       <div className="grid grid-cols-3 gap-3 mb-6">

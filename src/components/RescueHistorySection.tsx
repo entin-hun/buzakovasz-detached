@@ -3,6 +3,8 @@ import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
 import { useToast } from "@/hooks/use-toast";
 import { Camera, Pencil, X, Check, Lock } from "lucide-react";
+import { Button } from "@/components/ui/button";
+import { requireQueryData } from "@/lib/query-data";
 
 interface RawHistoryEntry {
   id: string;
@@ -49,6 +51,9 @@ export default function RescueHistorySection({ onOpenProfile }: RescueHistorySec
   const [passwordInput, setPasswordInput] = useState("");
   const [unlockedRows, setUnlockedRows] = useState<Set<string>>(new Set());
   const [rawEntries, setRawEntries] = useState<RawHistoryEntry[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [loadError, setLoadError] = useState(false);
+  const [hasLoaded, setHasLoaded] = useState(false);
 
   useEffect(() => {
     fetchHistory();
@@ -60,19 +65,24 @@ export default function RescueHistorySection({ onOpenProfile }: RescueHistorySec
   }, []);
 
   const fetchHistory = async () => {
+    setLoading(true);
+    try {
     const [historyRes, profilesRes, storesRes] = await Promise.all([
       supabase.from("rescue_history").select("*").order("het_datuma", { ascending: false }),
       supabase.from("profiles").select("user_id, vezeteknev, keresztnev, telefonszam"),
       supabase.from("stores").select("id, nev"),
     ]);
 
+    const raw = requireQueryData(historyRes);
+    const nextProfiles = requireQueryData(profilesRes);
+    const nextStores = requireQueryData(storesRes);
+
     const profileMap: Record<string, { vezeteknev: string; keresztnev: string; telefonszam: string }> = {};
-    (profilesRes.data ?? []).forEach((p) => { profileMap[p.user_id] = p; });
+    nextProfiles.forEach((p) => { profileMap[p.user_id] = p; });
 
     const storeMap: Record<string, string> = {};
-    (storesRes.data ?? []).forEach((s) => { storeMap[s.id] = s.nev; });
+    nextStores.forEach((s) => { storeMap[s.id] = s.nev; });
 
-    const raw = historyRes.data ?? [];
     setRawEntries(raw as RawHistoryEntry[]);
 
     // Group by het_datuma + store_id
@@ -89,7 +99,7 @@ export default function RescueHistorySection({ onOpenProfile }: RescueHistorySec
         });
       }
       const prof = profileMap[h.user_id];
-      groupMap.get(key)!.entries.push({
+      groupMap.get(key)?.entries.push({
         id: h.id,
         user_id: h.user_id,
         tipus: h.tipus,
@@ -105,6 +115,13 @@ export default function RescueHistorySection({ onOpenProfile }: RescueHistorySec
       b.het_datuma.localeCompare(a.het_datuma)
     );
     setGrouped(groups);
+    setHasLoaded(true);
+    setLoadError(false);
+    } catch {
+      setLoadError(true);
+    } finally {
+      setLoading(false);
+    }
   };
 
   const canEditEntry = (entryUserId: string, entryId: string) => {
@@ -198,13 +215,20 @@ export default function RescueHistorySection({ onOpenProfile }: RescueHistorySec
   return (
     <section className="px-4 max-w-6xl mx-auto pb-10">
       <h2 className="text-2xl font-bold text-foreground mb-2">📊 Mentéstörténet</h2>
-      <p className="text-muted-foreground text-sm mb-4">
+      {hasLoaded && <p className="text-muted-foreground text-sm mb-4">
         Korábbi heti mentések összesítése. Összesen megmentett pékáru: <strong className="text-foreground">{totalKg.toFixed(1)} kg</strong>
         {" · "}
         <span className="text-xs">A <Pencil size={10} className="inline" /> ikonra kattintva szerkesztheted a mentéseidet.</span>
-      </p>
+      </p>}
 
-      {grouped.length > 0 ? (
+      {loadError && <div role="alert" className="border border-destructive/40 rounded-lg p-4 mb-4 space-y-3">
+        <p className="text-foreground">A mentéstörténet betöltése nem sikerült. Kérjük, próbáld újra később.</p>
+        {hasLoaded && <p className="text-sm text-muted-foreground">A legutóbb betöltött adatok láthatók; azóta változhattak.</p>}
+        <Button variant="outline" onClick={fetchHistory} disabled={loading}>Újrapróbálás</Button>
+      </div>}
+      {loading && !hasLoaded && <p role="status" className="py-6 text-muted-foreground">Mentéstörténet betöltése…</p>}
+
+      {hasLoaded && (grouped.length > 0 ? (
         <div className="overflow-x-auto rounded-2xl border border-border" style={{ boxShadow: "var(--shadow-card)" }}>
           <table className="w-full text-sm">
             <thead>
@@ -303,7 +327,7 @@ export default function RescueHistorySection({ onOpenProfile }: RescueHistorySec
         <div className="rounded-2xl border border-border bg-card p-8 text-center text-muted-foreground" style={{ boxShadow: "var(--shadow-card)" }}>
           Még nincs mentéstörténet. A rendszer minden pénteken 20:00-kor archiválja a heti mentéseket.
         </div>
-      )}
+      ))}
 
       {/* Password prompt modal */}
       {passwordPrompt && (

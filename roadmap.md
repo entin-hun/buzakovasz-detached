@@ -1,4 +1,6 @@
 ## Feladatok
+- [ ] Üres oldal helyreállítása: Cloud újraaktiválás sikertelen a kimerült Cloud-egyenleg miatt; feltöltés szükséges az adatok és saját előzmények visszaellenőrzéséhez.
+- [x] Helyszínek és mentéstörténet betöltési/hibaállapota és újrapróbálás; hibás válasz nem írja felül a korábbi adatokat. 23 teszt sikeres, tényleges kiesés alatti böngészőpróba telefonon/számítógépen sikeres, nincs megtévesztő üres mentéstörténet, nincs túlcsordulás vagy futási hiba.
 - [x] Profilaudit: 48 profil, nincs név-, ékezetfüggetlen név- vagy telefonszámduplikáció, nincs régi fiók nélküli profil; vállalások változatlanok.
 - [ ] Az október 16-i egyetlen profil nélküli mentés: a fiókhoz nincs név/telefon, biztos személyazonosság nélkül nem kapcsolható más önkénteshez; önkéntes adatai szükségesek. Két további, még be nem lépett fióknak szintén nincs profilja.
 - [x] Nézetváltó ikonok javítva: fehér az aktív színes gombon, sötét a világos inaktív gombokon; alapértelmezett térkép, 22 pont és minden nézetváltás telefonon/számítógépen ellenőrizve, nincs túlcsordulás vagy böngészőhiba; 19 teszt sikeres.
